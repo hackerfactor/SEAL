@@ -1,4 +1,5 @@
 # Verifiable Identity using Distributed Authentication (VIDA): Comparison
+Version 1, 2-April-2024
 
 There are a variety of solutions that attempt to address the authentication and provenance problem.
 
