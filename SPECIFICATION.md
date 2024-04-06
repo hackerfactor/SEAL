@@ -229,8 +229,9 @@ For the extended date and/or id information:
 3. If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
 4. If there is a date format specified in `sf=`, then a timestamp found in the signature (`s=`) is prepended to the digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "1711471441.50:user123:*digest*"
 5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
-6. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
-7. If the computed digest (from step 5) matches the decrypted digest (from step 6), then the signature matches. This validates all bytes covered by the byte range (`b=`), as well as any timestamp and user id.
+6. Retrieve the public key from the DNS entry specified by the domain name (`d=`).
+7. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
+8. If the computed digest (from step 5) matches the decrypted digest (from step 6), then the signature matches. This validates all bytes covered by the byte range (`b=`), as well as any timestamp and user id.
 
 All verification is performed locally. There is no need to consult any external service for validating the cryptography. This also permits private verification:
 - DNS is required for retrieving the public key. However, DNS is a request-forwarding service. The domain providing the key never knows who is performing the validation. (Unless you intentionally bypass the DNS relaying and contact the authoritative DNS server directly.)
