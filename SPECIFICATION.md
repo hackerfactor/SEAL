@@ -245,6 +245,6 @@ If the DNS record contains `r=` with a date, then a signature with a date is onl
 ## Considerations
 The following concepts were considered while deciding on the VIDA format:
 - **JSON**: The VIDA fields would work really well as a JSON structure. However, JSON does not enforce data ordering without an array. An object is a collection of unorded *field*:*value* pairs, while an ordered list does not permit named fields. Using JSON for VIDA would increase the record size and complexity.
-- **JUMBF**: The JPEG universal metadata box format (JUMBF, ISO/IEC 19566-5:2023 Part 5) is a large data structure that carries more overhead than the VIDA data would provide. Moreover, the specifications can only be acquired from ISO after paying a fee, making the format details cost prohibitive to make developers.
+- **JUMBF**: The JPEG universal metadata box format (JUMBF, ISO/IEC 19566-5:2023 Part 5) is a large data structure that carries more overhead than the VIDA data would provide. Moreover, the specifications can only be acquired from ISO after paying a fee, making the format details cost prohibitive to many developers.
 - **CBOR**: The Concise Binary Object Representation (RFC 8949) requires the use of binary data to store the record, which can exclude the adoption of VIDA into text-only file formats. In addition, CBOR has a complex data structure that is larger than the format used by VIDA.
 
