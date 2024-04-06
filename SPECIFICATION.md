@@ -120,7 +120,7 @@ The fields are as follows:
   - "sha256": The default value.
   - "sha512": For much longer digests.
   - "sha1": For shorter digests.
-- `b=*range*` (Optional) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*-*stop* separated by commas.
+- `b=range` (Optional) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*-*stop* separated by commas.
   - Each range *start*-*stop* segment must be monotonically increasing. The *stop* value must never be before the *start* value. An invalid range is an error.
   - The *start* value must never be located before the start of the file. This is an invalid range is an error.
   - The *stop* value must never be located after the end of the file. This is an invalid range is an error.
@@ -133,9 +133,9 @@ The fields are as follows:
   - If a file contains multiple VIDA records, such as a streaming video format or appended document format, then the literal "p" can be used to denote the previous VIDA signature.
     - If there is not previous signature, then "p" is zero.
     - A streaming video may insert VIDA records using `b=p-s` in order to sign the bytes between the previous signature and the appended streaming data.
-- `d=*domain*`: The domain name containing the DNS TXT record for the VIDA public key.
+- `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
-- `id=*text*`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
+- `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
 - `copy="*text*"`: (Optional) Copyright information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
 - `info="*text*"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
 - `sf=hex` (Optional) The **s**ignature **f**ormat. Possible values:
@@ -150,19 +150,23 @@ The fields are as follows:
     - "date1:" specifies one decimal point, such as "1711471441.5" and accurate to within 0.05 seconds.
     - "date2:" specifies one decimal point, such as "1711471441.50" and accurate to within 0.005 seconds.
     - "date3:" specifies one decimal point, such as "1711471441.500" and accurate to within 0.0005 seconds. While this date3 example is numerically equivalent to the date1 example, they differ in the specified accuracy.
-- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (**ka=**) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and is fixed-length, so `sl=` is unnecessary.
-- `s=*signature*` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record.
+- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and is fixed-length, so `sl=` is unnecessary.
+- `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record.
 
 ## Local Signing
 The encoding workflow for basic signing is as follows:
+
 ![VIDA basic signing workflow](/docs/workflow-sign1.png)
+
 1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. The digest algorithm (`da=`) is used to generate a digest of the file.
 3. The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 4. The signature is stored in the `s=` value.
 
 The use of a date format or `id=` field allows the signer to generate a timestamp and authenticate a user account.
+
 ![VIDA basic signing workflow](/docs/workflow-sign2.png)
+
 1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. The digest algorithm (`da=`) is used to generate a first digest of the file.
 3. If there is an identifier specified in `id=`, then the value is prepended to the first digest along with a ":" literal.
@@ -181,7 +185,7 @@ The remote signer DOES NOT require a copy of the file! The remote signer only ne
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". This MUST match the DNS entry for the public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. This MUST match the DNS entry for the public key.
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST match the `da=` entry in the metadata.
-- `id=*text*` (Optional) This specifies user user's identity at the signing service. This MUST match the `id=` entry in the metadata.
+- `id=text` (Optional) This specifies user user's identity at the signing service. This MUST match the `id=` entry in the metadata.
 - `sf=hex` (Optional) The **s**ignature **f**ormat. This MUST match the `sf=` entry in the metadata.
 - *digest*: (Required) The digest bytes using hex formatting. This is case-insensitive and will be converted by the signer to binary data before signing.
 
