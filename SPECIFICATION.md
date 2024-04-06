@@ -136,8 +136,8 @@ The fields are as follows:
 - `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
-- `copy="*text*"`: (Optional) Copyright information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
-- `info="*text*"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
+- `copy="text"`: (Optional) Copyright information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
+- `info="text"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
 - `sf=hex` (Optional) The **s**ignature **f**ormat. Possible values:
   - "hex": The signatured is stored as a two-byte hexidecimal notation using lowercase letters [0-9a-f]. This is the default value if `sf=` is not specified.
   - "HEX": The signatured is stored as a two-byte hexidecimal notation using uppercase letters [0-9A-F].
@@ -174,7 +174,7 @@ The use of a date format or `id=` field allows the signer to generate a timestam
 5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. The complete signature string is stored in the `s=` value.  For example, `fs=date2:hex` would yield `s=1711471441.50:*signature-in-hex*`.
+8. The complete signature string is stored in the `s=` value.  For example, `fs=date2:hex` might yield "s=1711471441.50:*signature-in-hex*".
 
 ## Remote Signing
 The signer does not need to be the same system that is populating the VIDA record. For example, if the user does not have a domain name, then they may register an account at a signing service and use that service for trusted remote signing.
@@ -198,7 +198,7 @@ A remote signer always uses the extended signing workflow:
 5. (Remote) The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. (Remote) The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. (Remote) If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. (Remote) The completed value is returned to the local client system.  For example, `fs=date2:hex` might return a value like `1711471441.50:*signature-in-hex*`.
+8. (Remote) The completed value is returned to the local client system.  For example, `fs=date2:hex` might return a value like "1711471441.50:*signature-in-hex*".
 9. (Local) The complete value is stored in the `s=` value.
 
 The remote signer MUST use a clock that is synchronized to an authoritative time authority.
