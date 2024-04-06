@@ -190,7 +190,9 @@ The remote signer DOES NOT require a copy of the file! The remote signer only ne
 - *digest*: (Required) The digest bytes using hex formatting. This is case-insensitive and will be converted by the signer to binary data before signing.
 
 A remote signer always uses the extended signing workflow:
+
 ![VIDA basic signing workflow](/docs/workflow-sign2.png)
+
 1. (Local) The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. (Local) The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer.
 3. (Remote) If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
@@ -204,6 +206,36 @@ A remote signer always uses the extended signing workflow:
 The remote signer MUST use a clock that is synchronized to an authoritative time authority.
 
 Any invalid parameters, including attempts to sign using a revoked public key, MUST return an error to the local client.
+
+## Validation
+Validating a signature follows the same process for generating the digest, but compares the digest against the decoded signature.
+
+For the basic validation workflow:
+
+![VIDA basic signing workflow](/docs/workflow-validate1.png)
+
+1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
+2. The digest algorithm (`da=`) is used to generate a digest of the file.
+3. Retrieve the public key from the DNS entry specified by the domain name (`d=`).
+4. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`), resulting in a digest.
+5. If the computed digest matches the decrypted digest, then the signature matches. This validates all bytes covered by the byte range (`b=`).
+
+For the extended date and/or id information:
+
+![VIDA basic signing workflow](/docs/workflow-validate2.png)
+
+1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
+2. The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer.
+3. If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
+4. If there is a date format specified in `sf=`, then a timestamp found in the signature (`s=`) is prepended to the digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "1711471441.50:user123:*digest*"
+5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
+6. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
+7. If the computed digest (from step 5) matches the decrypted digest (from step 6), then the signature matches. This validates all bytes covered by the byte range (`b=`), as well as any timestamp and user id.
+
+All verification is performed locally. There is no need to consult any external service for validating the cryptography. This also permits private verification:
+- DNS is required for retrieving the public key. However, DNS is a request-forwarding service. The domain providing the key never knows who is performing the validation. (Unless you intentionally bypass the DNS relaying and contact the authoritative DNS server directly.)
+- Your local DNS server only sees a request for a DNS TXT lookup for a domain name. It does not know if you want the VIDA information, DKIM, SPF, or other data that is stored in the DNS TXT fields.
+- DNS requests are cached by intermediary services. Repeated DNS lookups are typically fast, and the authoritative domain system never knows when someone does repeated requests.
 
 ## Metadata Signature Storage Area
 The VIDA metadata record can be stored in any of the following areas:
