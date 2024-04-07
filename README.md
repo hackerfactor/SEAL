@@ -31,5 +31,5 @@ Today, if you send email, then you are very likely using both SPF and DKIM, even
 
 In my opinion, the anti-spam efforts got it right. VIDA applies DKIM to any file format (media), rather than being restricted to only email (as is the case with DKIM).
 
-For the solution details, see the SPECIFICATIONS document. The COMPARISON document shows how VIDA compares to other validation, authentication, and provenance solutions.
+For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how VIDA compares to other validation, authentication, and provenance solutions.
 
