@@ -17,6 +17,7 @@ FILEVIDA=kangaroo-vida.jpg
 
 all:
 	@echo "make keys    # generate public and private keys"
+	@echo "make testdns # check if your DNS contains the vida record"
 	@echo "make sign    # sign using the sign.sh script"
 	@echo "make check   # check signature with the check.sh script"
 
@@ -25,6 +26,9 @@ checkconfig:
 		echo "ERROR: Makefile is not configured. This won't work."; \
 		exit 1; \
 	fi
+
+testdns: checkconfig
+	dig TXT "$(DOMAIN)" | grep TXT | grep 'vida=1'
 
 vida-private.pem: checkconfig
 	openssl genrsa -out vida-private.pem 2048
