@@ -5,7 +5,24 @@ The Verifiable Identity using Distributed Authentication (VIDA) is an open solut
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
-## Overview
+## Solution Intent
+What is the intent behind signing a file?
+- VIDA doesn't attribute copyright or ownership. A malicious user can easily remove the signature and add in their own signature, claiming ownership. (Copyright or authorship can be declared in an existing EXIF, IPTC, or XMP metadata field.)
+- VIDA doesn't prove that a file is authentic or altered. Anyone can digitally sign any kind of media.
+- VIDA doesn't prevent a picture from being used out of context. A malicious user can always misrepresent the content.
+
+So what does VIDA provide? Attestation and responsibility. Signing a file puts your name on it. This means: you take responsibility for the content and metadata.
+- If an image is represented as real and has your name on it, then you attest that the content is authentic.
+- If you claim to be the authorized source of a picture, then put your name on it as the authoritative contact.
+- If a third-party signer is signing on behalf of an authenticated user, then specify the user's identifier as the notarized authoritative source. If a picture turns out to be a forgery, then the signature will point to the third-party signer and the signer can point to the authenticated user who requested the signature.
+
+You should not sign a file unless you can vouch for the accuracy of the metadata and content. For a photo, this should be the device's firmware, photographer, publisher, or investigator. For music, this could be the composer, recorder, publisher, or auditor. For any other kind of media, it should be the creator, author, or someone who can vouch for the authenticity.
+
+This attestation means that VIDA should reduce the number of forgeries and misrepresented content. A forgery won't use VIDA to authenticate a file since the false attestation can be easily traced back to the signer.
+
+Other authentication solutions effectively assign blame. VIDA provides accountability.
+
+## Solution Overview
 VIDA is based on the same concepts used by DKIM ([RFC6376](https://datatracker.ietf.org/doc/html/rfc6376)) to protect email. The basic DKIM workflow is as follows:
 
 ![DKIM workflow](/docs/workflow-dkim.png)
