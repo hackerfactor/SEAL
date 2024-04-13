@@ -37,12 +37,18 @@ To sign your own images:
 5. Try validating your file: `make check`
 
 After generating your keys, you can also sign using:
-```
-./vida-sign *domain* *private.key* *unsigned.jpg* *signed.jpg*
-```
+
+    ./vida-sign domain private.key input.jpg output-signed.jpg
+
 This will use your private key and domain for signing the unsigned image. This will generate the signed image.
 
 For validating, you only need the signed image:
-```
-./vida-verify.sh *signed.jpg*
-```
+
+    ./vida-verify.sh signed.jpg
+
+## About the Sample Image
+As noted in the [SPECIFICATION](/SPECIFICATION.md) document, VIDA provides attestation and accountability for the media.
+
+The sample kangaroo image was created using Google's Gemini text-to-image system. Google automatically includes a metadata block that denotes an AI-generated image. I then digitally signed it using my own domain (kangaroo-signed.png is signed by vida.hackerfactorcom, and I own that domain name). This means that I take responsibility for the metadata and content. (If you need an authoritative source for how this picture of a kangaroo eating strawberry ice cream was created, then I have declared myself as that source.)
+
+By the same means, if a media outlet signs a file, then it means that they take responsibility for the validation of the metadata and content.
