@@ -1,20 +1,22 @@
 # VIDA Specification
 Version 1, 2-April-2024
 
-The Verifiable Identity using Distributed Authentication (VIDA) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
+Verifiable Identity using Distributed Authentication (VIDA) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Solution Intent
+VIDA allows a user to cryptographically sign a file. The cryptographic implementation prevents forged signatures, false attribution, and false signing denials (nonrepudiation).
+
 What is the intent behind signing a file?
 - VIDA doesn't attribute copyright or ownership. A malicious user can easily remove the signature and add in their own signature, claiming ownership. (Copyright or authorship can be declared in an existing EXIF, IPTC, or XMP metadata field.)
 - VIDA doesn't prove that a file is authentic or altered. Anyone can digitally sign any kind of media.
-- VIDA doesn't prevent a picture from being used out of context. A malicious user can always misrepresent the content.
+- VIDA doesn't prevent the media (picture, audio, video, etc.) from being used out of context. A malicious user can always misrepresent the content.
 
 So what does VIDA provide? Attestation and responsibility. Signing a file puts your name on it. This means: you take responsibility for the content and metadata.
 - If an image is represented as real and has your name on it, then you attest that the content is authentic.
 - If you claim to be the authorized source of a picture, then put your name on it as the authoritative contact.
-- If a third-party signer is signing on behalf of an authenticated user, then specify the user's identifier as the notarized authoritative source. If a picture turns out to be a forgery, then the signature will point to the third-party signer and the signer can point to the authenticated user who requested the signature.
+- If a third-party signer is signing on behalf of an authenticated user, then specify the user's identifier as the notarized authoritative source. If a picture turns out to be a forgery, then the signature will point to the third-party signer and the signer will point to the authenticated user who requested the signature.
 
 You should not sign a file unless you can vouch for the accuracy of the metadata and content. For a photo, this should be the device's firmware, photographer, publisher, or investigator. For music, this could be the composer, recorder, publisher, or auditor. For any other kind of media, it should be the creator, author, or someone who can vouch for the authenticity.
 
@@ -50,15 +52,15 @@ With VIDA:
 
 1. The sender generates a public/private key pair. This is only done once.
 2. The private key is kept on the signing system. The public key is published in a DNS record.
-3. When a file is generated, portions of the file are used to generate a hash.  The hash is cryptographically signed using the private key.  The hash components and signature are stored in the metadata.
+3. When a file is signed, portions of the file are used to generate a hash. The hash is cryptographically signed using the private key. The hash components and signature are stored in the metadata.
 4. Any recipient of the file can validate the signature:
    - It computes the associated hash based on the file's contents, as specified in the VIDA metadata.
    - It retrieves the public key from the DNS entry using the domain name specified by the VIDA metadata.
-   - It compares the hash with the signature and public key in in order to see if the signature matches.
+   - It compares the hash with the signature (in the metadata) and public key (from DNS) in in order to see if the signature matches.
    - If the signature matches, then the file is authenticated and validated. If the signature does not match, then the file is tampered or forged, and explicitly untrusted.
 
 ## About RSA Signing
-The RSA algorithm (named after the inventors, Rivest, Shamir, and Adleman) uses a public and private key pair.
+The RSA algorithm (named after the inventors, Rivest, Shamir, and Adleman) is the default cryptographic algorithm. RSA uses a public and private key pair.
 - Any data encrypted with the private key can only be decrypted with the public key.
 - Any data encrypted with the public key can only be decrypted with the private key.
 
@@ -68,7 +70,7 @@ Signing uses the private key to encrypt a digest and the public key to decrypt i
   2. Encrypt the digest using the private key.  The result is the 'signature'.
 - For validation:
   1. Compute a hash of the data again, such as a SHA256 digest.
-  2. Decrypt the signature using the private key.
+  2. Decrypt the signature using the public key.
   3. Check if the decrypted signature matches the computed digest.
 
 The length of the signature is dependent on the length of the key. For example:
@@ -95,7 +97,7 @@ With OpenSSL, there are different file formats, including:
 - PEM: A Privacy Enhanced Mail (PEM) file contains base64 encoded data and includes BEGIN and END markers.
 - DER: A Distinguished Encoding Rules (DER) file is a raw binary file. It contains the same information as a PEM file, but the DER format is smaller because it is not base64 encoded.
 
-The public DER file contains raw binary and will need to be encoded before inserting into DNS.
+The public DER file contains raw binary and will need to be encoded before being stored in DNS.
 
 ## DNS Storage
 The public key is stored in a DNS record. This requires access to a domain's DNS service. If you own your own domain name, then adding a DNS entry it typically provided by your domain registrar. However, you cannot add a DNS record to someone else's domain name.
@@ -108,7 +110,7 @@ The DNS entry MUST contain a series of field=value pairs. The defined fields are
 - `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
 
 For revocation:
-- `r=date` The timestamp in ISO 8601 format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56` or `r=2024-04-03`.
+- `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
 - `p=`, `p=revoke`, or no `p=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
 
 A complete DNS record may look like:
@@ -127,51 +129,61 @@ The VIDA metadata format is very similar to the DNS entry format. It consists of
 - A single text entry with no newlines.
 - Multiple field=value pairs separated by a single space.
 - There MUST NOT be any spaces around the equal sign.
-- The values may be quoted with single quotes ['] or double quotes ["]; "smartquotes" and other quoting characters are not permitted. The quote mark that begins the value must also be used to end the value. E.g., "ok", and 'ok', but 'invalid".
+- Any value that contains spaces must be quoted.
+- The values may be quoted with single quotes ['] or double quotes ["]; "smartquotes" and other quoting characters are not permitted. The quote mark that begins the value must also be used to end the value. E.g., "valid", and 'valid', but 'invalid".
 
 The fields are as follows:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST be the first text in the VIDA record.
 - `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa".
-- `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, limited punctuation, and quotes or no spaces).
+- `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, and limited punctuation; no spaces).
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST be a NIST-approved algorithm. Current supported values are:
   - "sha256": The default value.
   - "sha512": For much longer digests.
-  - "sha1": For shorter digests.
+  - "sha1": For shorter digests. (This algorithm is deprecated by NIST, but still widely used.)
 - `b=range` (Optional) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*-*stop* separated by commas.
   - Each range *start*-*stop* segment must be monotonically increasing. The *stop* value must never be before the *start* value. An invalid range is an error.
-  - The *start* value must never be located before the start of the file. This is an invalid range is an error.
-  - The *stop* value must never be located after the end of the file. This is an invalid range is an error.
+  - The *start* value must never be located before the start of the file. This is an invalid range error.
+  - The *stop* value must never be located after the end of the file. This is an invalid range error.
+  - If the *start* is not specified, then it denotes the beginning of the file.
+  - If the *stop* is not specified, then it denotes the end of the file.
   - The range should never include the signature itself. This is because the value of the signature is unknown before it is signed. This type of invalid range will generate an invalid signature.
-  - The literal value "s" denotes the location of the signature value in the current VIDA record.
-    - When used on the right-side of the range value, it denotes the last byte before the start of the signature.
-    - When used on the left-side of the range value, it denotes the first byte after the signature.
+  - The literal value `s` denotes the location of the signature value in the current VIDA record.
+    - When used on the right-side (*start*) of the range value, it denotes the last byte before the start of the signature.
+    - When used on the left-side (*stop*) of the range value, it denotes the first byte after the signature.
     - The default range is `b=-s,s-`, denoting all bytes in the file up to the signature and then all bytes following the signature.
-    - The "s" literal may be included in a parenthetical with offsets. For example: `b=-(s-100),(s-50)-s,(s+10)-`. This denotes a concatenation of three byte ranges. The first goes from the beginning of the file to 100 bytes before the start of the signature. The second is 50 bytes before the signature to the start of the signature. The third denotes 10 bytes after the signature to the end of the file. (Why would you do this? You probably wouldn't; this is just an example.)
-  - If a file contains multiple VIDA records, such as a streaming video format or appended document format, then the literal "p" can be used to denote the previous VIDA signature.
-    - If there is not previous signature, then "p" is zero.
-    - A streaming video may insert VIDA records using `b=p-s` in order to sign the bytes between the previous signature and the appended streaming data.
+    - The `s` literal may be included in a parenthetical with offsets. For example: `b=-(s-100),(s-50)-s,(s+10)-`. This denotes a concatenation of three byte ranges. The first goes from the beginning of the file to 100 bytes before the start of the signature. The second is 50 bytes before the signature to the start of the signature. The third denotes 10 bytes after the signature to the end of the file. (Why would you do this? You probably wouldn't; this is just an example.)
+  - If a file contains multiple VIDA records, such as a streaming video format or appended document format, then the literal `p` can be used to denote the previous VIDA signature.
+    - If there is not previous signature, then `p` is zero.
+    - A streaming video may insert VIDA records using `b=p-s` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last VIDA entry should probably contain `b=p-s,s-` to sign from the previous signature to the current signature and from the current signature to the end of the file.
 - `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
-- `copy="text"`: (Optional) Copyright information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
+- `copy="text"`: (Optional) Copyright information. Copyright information is typically stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
 - `info="text"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the VIDA record.
-- `sf=hex` (Optional) The **s**ignature **f**ormat. Possible values:
-  - "hex": The signature is stored as a two-byte hexadecimal notation using lowercase letters [0-9a-f]. This is the default value if `sf=` is not specified.
+- `sf=base64` (Optional) The **s**ignature **f**ormat. Possible values:
+  - "hex": The signature is stored as a two-byte hexadecimal notation using lowercase letters [0-9a-f].
   - "HEX": The signature is stored as a two-byte hexadecimal notation using uppercase letters [0-9A-F].
-  - "base64": The signature is stored as a base64-encoded value. Terminating "=" padding may be omitted.
-  - "bin": The signature is stored as a raw binary data.
-  - "date:" Any of the other formats may be preceded by "date:", such as `sf=date:hex`. This indicates that the signature begins with a numeric timestamp in GMT epoch format (seconds since 1970-01-01 00:00:00). The date is generated by the signer.
+  - "base64": The signature is stored as a base64-encoded value. Terminating "=" padding may be omitted. This is the default value if `sf=` is not specified.
+  - "bin": The signature is stored as a raw binary data. This should only be used in file formats that support storing binary data. (This is also why the signature must always be the last element in the VIDA record. The binary signature ends when the VIDA record ends. Alternately, the `sl=` parameter can be used to specify the signature length.)
+  - "date:" Any of the other formats may be preceded by the literal `date:`, such as `sf=date:hex`. This indicates that the signature begins with a numeric timestamp in GMT epoch format (seconds since 1970-01-01 00:00:00). The date is generated by the signer.
   - "date[0-9]:" Date with a number indicates the number of decimal points in the fraction of the date. This is used to specify subseconds. The number of decimal points identifies the accuracy of the timestamp. For example:
-    - "date:" may generate "1711471441:" for 2024-03-26 16:44:01 GMT. The accuracy is +/- 0.5 seconds.
-    - "date0:" specifies no fractions and is the same as "date".
-    - "date1:" specifies one decimal point, such as "1711471441.5" and accurate to within 0.05 seconds.
-    - "date2:" specifies one decimal point, such as "1711471441.50" and accurate to within 0.005 seconds.
-    - "date3:" specifies one decimal point, such as "1711471441.500" and accurate to within 0.0005 seconds. While this date3 example is numerically equivalent to the date1 example, they differ in the specified accuracy.
-- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and is fixed-length, so `sl=` is unnecessary.
+    - `date:` may generate "1711471441:" for 2024-03-26 16:44:01 GMT. The accuracy is +/- 0.5 seconds.
+    - `date0:` specifies no fractions and is the same as `date`.
+    - `date1:` specifies one decimal point, such as "1711471441.5" and accuracy to within 0.05 seconds.
+    - `date2:` specifies one decimal point, such as "1711471441.50" and accuracy to within 0.005 seconds.
+    - `date3:` specifies one decimal point, such as "1711471441.500" and accuracy to within 0.0005 seconds. While this `date3` example is numerically equivalent to the `date1` example, they differ in the specified accuracy.
+- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length or cannot be determined based on the VIDA record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary.
 - `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record.
 
+A sample VIDA signature may look like:
+```
+vida="1" b="-s,s-" d="vida.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
+```
+
 ## Local Signing
-The encoding workflow for basic signing is as follows:
+Local signing permits a user to directly sign their media. This does not require any third-party services.
+
+The encoding workflow for local signing is as follows:
 
 ![VIDA basic signing workflow](/docs/workflow-sign1.png)
 
@@ -180,7 +192,7 @@ The encoding workflow for basic signing is as follows:
 3. The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 4. The signature is stored in the `s=` value.
 
-The use of a date format or `id=` field allows the signer to generate a timestamp and authenticate a user account.
+The use of a date format or `id=` field allows the signer to generate a timestamp and authenticate a user account. This approach uses a double-digest:
 
 ![VIDA basic signing workflow](/docs/workflow-sign2.png)
 
@@ -191,12 +203,12 @@ The use of a date format or `id=` field allows the signer to generate a timestam
 5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. The complete signature string is stored in the `s=` value.  For example, `fs=date2:hex` might yield "s=1711471441.50:*signature-in-hex*".
+8. The complete signature string is stored in the `s=` value.  For example, `fs=date2:hex` might yield `s=1711471441.50:*signature-in-hex*`.
 
 ## Remote Signing
 The signer does not need to be the same system that is populating the VIDA record. For example, if the user does not have a domain name, then they may register an account at a signing service and use that service for trusted remote signing.
 
-The remote signer DOES NOT require a copy of the file! The remote signer only needs:
+The remote signer DOES NOT require a copy of the file! This provides content privacy. The remote signer only needs:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST match the DNS entry for the public key.
 - `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". This MUST match the DNS entry for the public key.
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". This MUST match the DNS entry for the public key.
@@ -204,20 +216,22 @@ The remote signer DOES NOT require a copy of the file! The remote signer only ne
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST match the `da=` entry in the metadata.
 - `id=text` (Optional) This specifies user user's identity at the signing service. This MUST match the `id=` entry in the metadata.
 - `sf=hex` (Optional) The **s**ignature **f**ormat. This MUST match the `sf=` entry in the metadata.
-- *digest*: (Required) The digest bytes using hex formatting. This is case-insensitive and will be converted by the signer to binary data before signing.
+- `d=*digest*`: (Required) The digest bytes using case-insensitive hex formatting. This will be converted by the signer to binary data before signing.
 
-A remote signer always uses the extended signing workflow:
+These specific values are needed for remotely signing. However, the fields are recommendations. For example, a web-based signing system may use alternate field names to convey the same values.
+
+A remote signer always uses the extended signing workflow, with "Local" referring to work performed by the user's system and "Remote" identifying work performed by the remote signer.
 
 ![VIDA basic signing workflow](/docs/workflow-sign2.png)
 
 1. (Local) The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
-2. (Local) The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer.
+2. (Local) The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer. This approach guarantees that the remote signer never has direct access to the signing file and provides content privacy.
 3. (Remote) If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
 4. (Remote) If there is a date format specified in `sf=`, then a timestamp with the correct number of decimal places is generated. This is prepended to the first digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "1711471441.50:user123:*digest*"
 5. (Remote) The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. (Remote) The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. (Remote) If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. (Remote) The completed value is returned to the local client system.  For example, `fs=date2:hex` might return a value like "1711471441.50:*signature-in-hex*".
+8. (Remote) The completed value is returned to the local client system.  For example, `fs=date2:hex` might return a value like `1711471441.50:*signature-in-hex*`
 9. (Local) The complete value is stored in the `s=` value.
 
 The remote signer MUST use a clock that is synchronized to an authoritative time authority.
@@ -255,42 +269,63 @@ All verification is performed locally. There is no need to consult any external 
 - Your local DNS server only sees a request for a DNS TXT lookup for a domain name. It does not know if you want the VIDA information, DKIM, SPF, or other data that is stored in the DNS TXT fields.
 - DNS requests are cached by intermediary services. Repeated DNS lookups are typically fast, and the authoritative domain system never knows when someone does repeated requests.
 
+For offline use, the DNS record may be copied locally and used in place of an active DNS lookup. However, this usage may not notice if there is a revocation posted to DNS at a later time.
+
 ## Metadata Signature Storage Area
 The VIDA metadata record can be stored in any of the following areas:
 - **XMP**: VIDA can be stored in an XMP "<vida>value</vida>" where value includes all VIDA parameters and the signature. This is ideal for any file format that already supports XMP. For example, a full VIDA record in XMP may look like:
 ```
 <vida vida="1" ka="rsa" da="sha256" d="default.vida.hackerfactor.com" c="This is a comment" copy="Copyright 2024 (C) Hacker Factor" b="-s,s-" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
 ```
-A minimal example omits fields, relying on the default values:
+or
+```
+<vida>vida="1" ka="rsa" da="sha256"
+d="default.vida.hackerfactor.com"
+c="This is a comment" copy="Copyright 2024 (C) Hacker Factor"
+b="-s,s-" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="
+</vida>
+```
+This latter format may use quotes or HTML-entities, such as `&quot;`.
+
+A minimal XMP example omits fields, relying on the default values, such as:
 ```
 <vida d="default.vida.hackerfactor.com" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q"/>
 ```
 NOTE: The minimal example doesn't have the same VIDA fields as the full example, so the bytes covered by the range are different, resulting in a different signature.
-- **JPEG**: A custom application record can be used to store the VIDA record. It should be an APP13 block with the label "VIDA".
-- **PNG**: A custom application record can be used to store the VIDA record. The PNG chunk should use "viDa".
-- **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom application record can be used to store the VIDA record. The atom should use "VIDA".
-- **RIFF** (WebP, AVI, WAV, etc.): A custom application record can be used to store the VIDA record. The atom should use "VIDA".
 
-A file can contain multiple signature. The specified byte ranges (`b=`) should not overlap subsequent VIDA records. If a file is altered and a new VIDA record is added without removing an older one, then the older VIDA signature should fail to validate.
+### File-specific Formats
+For file formats that may not contain XMP records, the VIDA information may also be stored in VIDA-specific data blocks:
+- **JPEG**: A custom JPEG application record can be used to store the VIDA record. It should be an APP13 block with the label `VIDA`.
+- **PNG**: A custom PNG chunk can be used to store the VIDA record. The PNG chunk should use `viDa`.
+- **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom atomic block can be used to store the VIDA record. The atom should use `VIDA`.
+- **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the VIDA record. The atom should use `VIDA`.
 
+A file can contain multiple signature. The specified byte ranges (`b=`) should not overlap subsequent VIDA records. If a file is altered and a new VIDA record is added without removing an older one, then there are two options:
+- If the first chunk uses the full file range, such as `b=-s,s-`, then the older VIDA signature should fail to validate but the second VIDA record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous VIDA record was invalid.
+- If the first chunk does not cover the appended information, such as `b=-s` or `b=p-s`, then the appended information only needs to sign the appended data, such as `b=p-s`. However, nothing prevents the appended signature from covering the entire file, such as `b=-s,s-`.
+
+### Container Formats
 Many file formats act as containers.
 - The container's VIDA record should cover the container, including any nested contents.
-- The inner "contained" files may have their own VIDA records. For those nested files, any internal VIDA record's range is limited to the contained file and NOT the parent container.
+- The inner "contained" files may have their own VIDA records. For those nested files, any internal VIDA record's range is limited to the scope of the contained file and NOT the parent container.
+
 For example, a JPEG may contain an EXIF record that can contain another JPEG as a preview image.
-- The VIDA in the preview image is limited to the contents of the preview image. The VIDA entry `b=-s,s-` specifies a range from the start of the preview image to the end of the preview image.
-- The VIDA in the containing JPEG covers the entire JPEG. The VIDA entry `b=-s,s-` covers the entire JPEG, including the contained preview image. The range `b=p-s` does NOT begin at the VIDA record in the contained preview image.
+- The VIDA record in the preview image is limited to the contents of the preview image. The VIDA entry `b=-s,s-` specifies a range from the start of the preview image to the end of the preview image.
+- The VIDA record in the containing JPEG covers the entire JPEG. The VIDA entry `b=-s,s-` covers the entire JPEG, including the contained preview image. The range `b=p-s` does NOT begin at the VIDA record in the contained preview image.
 
 ## Metadata Signature to DNS Matching
 A single hostname in DNS may have multiple TXT VIDA records. When looking up a DNS record:
 - The hostname must match the name specified in the metadata signature.
 - The `vida=` version must match the name specified in the metadata signature.
-- The `ka=` key algorithm must match the value in the metadata signature. If `ka` is not defined in the DNS or VIDA signature, then it is assumed to be `ka=rsa`.
-- The `kv=` key version must match the name specified in the metadata signature. If `kv` is not defined in the DNS or VIDA signature, then it is assumed to be `kv=1`.
-- The `uid=` identifier must match the `uid=` specified in the metadata signature. If `uid` is not defined in the DNS or VIDA signature, then it is assumed to be an empty value (`id=""`).
+- The `ka=` key algorithm must match the value in the metadata signature. If `ka` is not defined in the DNS or VIDA record, then it is assumed to be `ka=rsa`.
+- The `kv=` key version must match the name specified in the metadata signature. If `kv` is not defined in the DNS or VIDA record, then it is assumed to be `kv=1`.
+- The `uid=` identifier must match the `uid=` specified in the metadata signature. If `uid` is not defined in the DNS or VIDA record, then it is assumed to be an empty value (`uid=""`).
 
 If the DNS record contains no `p=` definition, no value, or the literal value "revoked", then the signature is explicitly invalid due to revocation.
 
-If the DNS record contains `r=` with a date, then a signature with a date is only valid if it predates the `r=` value. If the signature does not include a date, or the `r=` value is invalid, then the signature is explicitly invalid due to revocation.
+If the DNS record contains `r=` with a date, then a signature with a date is only valid if it predates the `r=` value. If the signature does not include a date, or the `r=` value is after the signature's date, then the signature is explicitly invalid due to revocation.
+
+If the DNS record contains `r=` with an invalid date string, then the signature is explicitly invalid due to revocation.
 
 ## Considerations
 The following concepts were considered while deciding on the VIDA format:
