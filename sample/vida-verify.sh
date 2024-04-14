@@ -15,7 +15,6 @@
 #   dd for digest
 #   grep for digest
 #   openssl for validating the signature
-#   tr for formatting the signature
 
 #######################################
 # Check if commands exist
@@ -46,16 +45,6 @@ fi
 
 if ! [ -x "$(command -v dd)" ] ; then
   echo "MISSING: dd"
-  exit 1
-fi
-
-if ! [ -x "$(command -v tr)" ] ; then
-  echo "MISSING: tr"
-  exit 1
-fi
-
-if ! [ -x "$(command -v sed)" ] ; then
-  echo "MISSING: sed"
   exit 1
 fi
 
