@@ -300,7 +300,7 @@ For file formats that may not contain XMP records, the VIDA information may also
 - **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom atomic block can be used to store the VIDA record. The atom should use `VIDA`.
 - **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the VIDA record. The atom should use `VIDA`.
 
-A file can contain multiple signature. The specified byte ranges (`b=`) should not overlap subsequent VIDA records. If a file is altered and a new VIDA record is added without removing an older one, then there are two options:
+A file can contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent VIDA records. If a file is altered and a new VIDA record is added without removing an older one, then there are two options:
 - If the first chunk uses the full file range, such as `b=-s,s-`, then the older VIDA signature should fail to validate but the second VIDA record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous VIDA record was invalid.
 - If the first chunk does not cover the appended information, such as `b=-s` or `b=p-s`, then the appended information only needs to sign the appended data, such as `b=p-s`. However, nothing prevents the appended signature from covering the entire file, such as `b=-s,s-`.
 
