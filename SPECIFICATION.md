@@ -104,22 +104,20 @@ The public key is stored in a DNS record. This requires access to a domain's DNS
 
 The DNS entry MUST contain a series of field=value pairs. The defined fields are:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST be the first text in the TXT record.
-- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa".
+- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". For elliptic curve algorithms, use "ka=ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, limited punctuation, and quotes or no spaces).
-- `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
+- `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. When not present, the default value is an empty string: `uid=''`. The string cannot contain single-quote ('), double-quote ("), or space characters.
 - `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
 
 For revocation:
 - `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
 - `p=`, `p=revoke`, or no `p=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
 
+DNS has a limit of 255 bytes per text string. Longer VIDA records can be split into strings. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
+
 A complete DNS record may look like:
 ```
 vida.example.com TXT vida=1 p="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA43KBD2MSnczlYRZJqS9BPjwFK1o+obHy" "oV2II2R2jbug91wzBfUU+uJm3iYbfQWz7CJ5fbzN+OQT+sXM5PjdjCPKI/4o+h58QqBlF8JrS5ip" "QwZtJfgvd7UKYxvL4trDTeU7zqShTHygMNibn9LzcwhHQ2MJvuq76V6W6lobab56oHQjwvH3Rqqw" "YJtOpr3qt3+oIq5Ex++GD9DYuJDQce2KNhAd8zLb8Y0fzpvOEQaOTG6vgnoWJlIWFAkZaHlI5ie2" "lI3YYX5z9+j9wucCEfu3fdm7nB4VzTGyW3D7zdFyMbEbhY6jPv+0k7IWWS5QV8DpTkgPj0VU5Xxw" "ty6cGQIDAQAB"
-```
-or:
-```
-vida.example.com TXT vida=1 ka=rsa kv=1 uid=user123 p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA43KBD2MSnczlYRZJqS9BPjwFK1o+obHyoV2II2R2jbug91wzBfUU+uJm3iYbfQWz7CJ5fbzN+OQT+sXM5PjdjCPKI/4o+h58QqBlF8JrS5ipQwZtJfgvd7UKYxvL4trDTeU7zqShTHygMNibn9LzcwhHQ2MJvuq76V6W6lobab56oHQjwvH3RqqwYJtOpr3qt3+oIq5Ex++GD9DYuJDQce2KNhAd8zLb8Y0fzpvOEQaOTG6vgnoWJlIWFAkZaHlI5ie2lI3YYX5z9+j9wucCEfu3fdm7nB4VzTGyW3D7zdFyMbEbhY6jPv+0k7IWWS5QV8DpTkgPj0VU5Xxwty6cGQIDAQAB
 ```
 
 The hostname does *not* need to contain "vida". The only requirement is that it must be a valid DNS name *and* must match the domain name specified in the metadata signature.
@@ -131,10 +129,16 @@ The VIDA metadata format is very similar to the DNS entry format. It consists of
 - There MUST NOT be any spaces around the equal sign.
 - Any value that contains spaces must be quoted.
 - The values may be quoted with single quotes ['] or double quotes ["]; "smartquotes" and other quoting characters are not permitted. The quote mark that begins the value must also be used to end the value. E.g., "valid", and 'valid', but 'invalid".
+- Unless specified, the valid character set is:
+  - All ASCII letters [A-Za-z] and numbers [0-9]
+  - Punctuation excluding quotes
+  - <i>Either</i> single quote (') or double quote (") but not both. This is because values must be quotable.
+  - Space ( )
+  Other characters, including tabs, binary, and multibyte characters are not permitted.
 
 The fields are as follows:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST be the first text in the VIDA record.
-- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa".
+- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". For elliptic curve algorithms, use "ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, and limited punctuation; no spaces).
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST be a NIST-approved algorithm. Current supported values are:
   - "sha256": The default value.
