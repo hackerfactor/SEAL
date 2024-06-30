@@ -1,5 +1,5 @@
 # VIDA Specification
-Version 1, 2-April-2024
+Version 1.1, 30-June-2024
 
 Verifiable Identity using Distributed Authentication (VIDA) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
