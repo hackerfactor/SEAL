@@ -151,13 +151,21 @@ The fields are as follows:
   - If the *start* is not specified, then it denotes the beginning of the file.
   - If the *stop* is not specified, then it denotes the end of the file.
   - The range should never include the signature itself. This is because the value of the signature is unknown before it is signed. This type of invalid range will generate an invalid signature.
+  - The literal value `b` represents the beginning of the file.
+    - This is equivalent to the value "0". These are equivalent: `b=-s`, `b=b-s`, and `b=0-s`.
+  - The literal value `e` represents the end of the file. It is provided for file formats that include a checksum at the end of the file.
+    - These are equivalent: `b=s-`, `b=s-e`.
   - The literal value `s` denotes the location of the signature value in the current VIDA record.
-    - When used on the right-side (*start*) of the range value, it denotes the last byte before the start of the signature.
-    - When used on the left-side (*stop*) of the range value, it denotes the first byte after the signature.
-    - The default range is `b=-s,s-`, denoting all bytes in the file up to the signature and then all bytes following the signature.
-    - The `s` literal may be included in a parenthetical with offsets. For example: `b=-(s-100),(s-50)-s,(s+10)-`. This denotes a concatenation of three byte ranges. The first goes from the beginning of the file to 100 bytes before the start of the signature. The second is 50 bytes before the signature to the start of the signature. The third denotes 10 bytes after the signature to the end of the file. (Why would you do this? You probably wouldn't; this is just an example.)
+    - When used on the left-side (*start*) of the range value, it denotes the first byte after the signature.
+    - When used on the right-side (*stop*) of the range value, it denotes the last byte before the start of the signature.
+    - The default range is `b=b-s,s-e`, denoting all bytes in the file up to the signature and then all bytes following the signature.
+    - The `s` literal may be included in a parenthetical with offsets.
+      - Example: `b=-(s-100),(s-50)-s,(s+10)-`. This denotes a concatenation of three byte ranges. The first goes from the beginning of the file to 100 bytes before the start of the signature. The second is 50 bytes before the signature to the start of the signature. The third denotes 10 bytes after the signature to the end of the file. (Why would you do this? You probably wouldn't; this is just an example.)
+      - Example: `b=b-s,(s+4)-e`. This denotes a concatenation of two byte ranges. The first goes from the beginning of the file to the start of the signature. The second begins four (4) bytes after the signature and goes to the end of a file. Why would you do this? PNG chunks end with a four-byte CRC checksum. If the VIDA signature is the last value in the chunk, then the next two bytes (PNG checksum) must be changed when the signature is written. This range permits updating the PNG checksum without changing the signature, resulting in a valid VIDA signature and a valid PNG chuck with a valid checksum.
   - If a file contains multiple VIDA records, such as a streaming video format or appended document format, then the literal `p` can be used to denote the previous VIDA signature.
-    - If there is not previous signature, then `p` is zero.
+    - When used on the left-side (*start*) of the range value, it denotes the first byte after the previous signature.
+    - When used on the right-side (*stop*) of the range value, it denotes the last byte before the start of the previous signature.
+    - If there is no previous signature, then `p` is zero.
     - A streaming video may insert VIDA records using `b=p-s` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last VIDA entry should probably contain `b=p-s,s-` to sign from the previous signature to the current signature and from the current signature to the end of the file.
 - `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
