@@ -144,29 +144,24 @@ The fields are as follows:
   - "sha256": The default value.
   - "sha512": For much longer digests.
   - "sha1": For shorter digests. (This algorithm is deprecated by NIST, but still widely used.)
-- `b=range` (Optional) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*-*stop* separated by commas.
-  - Each range *start*-*stop* segment must be monotonically increasing. The *stop* value must never be before the *start* value. An invalid range is an error.
+- `b=range` (Optional) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*~*stop*, using tilda to denote the range deliminator. Multiple ranges may be specified by commas.
+  - Each range *start*~*stop* segment must be monotonically increasing. The *stop* value must never be before the *start* value. An invalid range is an error.
   - The *start* value must never be located before the start of the file. This is an invalid range error.
   - The *stop* value must never be located after the end of the file. This is an invalid range error.
   - If the *start* is not specified, then it denotes the beginning of the file.
   - If the *stop* is not specified, then it denotes the end of the file.
   - The range should never include the signature itself. This is because the value of the signature is unknown before it is signed. This type of invalid range will generate an invalid signature.
-  - The literal value `b` represents the beginning of the file.
-    - This is equivalent to the value "0". These are equivalent: `b=-s`, `b=b-s`, and `b=0-s`.
-  - The literal value `e` represents the end of the file. It is provided for file formats that include a checksum at the end of the file.
-    - These are equivalent: `b=s-`, `b=s-e`.
-  - The literal value `s` denotes the location of the signature value in the current VIDA record.
-    - When used on the left-side (*start*) of the range value, it denotes the first byte after the signature.
-    - When used on the right-side (*stop*) of the range value, it denotes the last byte before the start of the signature.
-    - The default range is `b=b-s,s-e`, denoting all bytes in the file up to the signature and then all bytes following the signature.
-    - The `s` literal may be included in a parenthetical with offsets.
-      - Example: `b=-(s-100),(s-50)-s,(s+10)-`. This denotes a concatenation of three byte ranges. The first goes from the beginning of the file to 100 bytes before the start of the signature. The second is 50 bytes before the signature to the start of the signature. The third denotes 10 bytes after the signature to the end of the file. (Why would you do this? You probably wouldn't; this is just an example.)
-      - Example: `b=b-s,(s+4)-e`. This denotes a concatenation of two byte ranges. The first goes from the beginning of the file to the start of the signature. The second begins four (4) bytes after the signature and goes to the end of a file. Why would you do this? PNG chunks end with a four-byte CRC checksum. If the VIDA signature is the last value in the chunk, then the next two bytes (PNG checksum) must be changed when the signature is written. This range permits updating the PNG checksum without changing the signature, resulting in a valid VIDA signature and a valid PNG chuck with a valid checksum.
-  - If a file contains multiple VIDA records, such as a streaming video format or appended document format, then the literal `p` can be used to denote the previous VIDA signature.
-    - When used on the left-side (*start*) of the range value, it denotes the first byte after the previous signature.
-    - When used on the right-side (*stop*) of the range value, it denotes the last byte before the start of the previous signature.
-    - If there is no previous signature, then `p` is zero.
-    - A streaming video may insert VIDA records using `b=p-s` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last VIDA entry should probably contain `b=p-s,s-` to sign from the previous signature to the current signature and from the current signature to the end of the file.
+  - The following literal characters are defined for denoting specific offsets:
+    - 'F' denotes the beginning of the file. This is equivalent to "0".
+    - 'f' denotes the end of the file.
+    - 'S' denotes the beginning of the signature.
+    - 's' denotes the end of the signature. If `b=` is not defined, then the default range is `b=F~S,s~f`.
+    - 'P' denotes the beginning of the previous signature. This is useful when a file contains multiple signatures, such as with a periodically-signed video stream. If there is no previous signature, then this is equivalent to zero (0). 
+    - 'p' denotes the end of the previous signature. If there is no previous signature, then this is equivalent to zero (0). 
+  - Any literal character may be combined with simple arithmetic offsets.
+    - For example: `b=F+4~S,s~f-20` This defines two ranges. The first begins 4 bytes into the file and ends at the start of the signature. The second begins after the signature and ends 20 bytes before the end of the file.
+    - As another example, PNG files use chunks that end with a four-byte checksum. The checksum is not known until after the signature is computed. As a result, the byte range must exclude the PNG chunk's checksum. After the checksum is computed and inserted into the file, the chunk checksum must be updated. Assuming that the signature ends at the end of the chunk, the range can use `b=F~S,s+4~f` to exclude the signature and PNG checksum.
+    - A streaming video may insert VIDA records using `b=p~S` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last VIDA entry should probably contain `b=p~S,s~f` to sign from the previous signature to the current signature and from the current signature to the end of the file.
 - `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
@@ -189,7 +184,7 @@ The fields are as follows:
 
 A sample VIDA signature may look like:
 ```
-vida="1" b="-s,s-" d="vida.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
+vida="1" b="~S,s~" d="vida.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
 ```
 
 ## Local Signing
@@ -287,14 +282,14 @@ For offline use, the DNS record may be copied locally and used in place of an ac
 The VIDA metadata record can be stored in any of the following areas:
 - **XMP**: VIDA can be stored in an XMP "<vida>value</vida>" where value includes all VIDA parameters and the signature. This is ideal for any file format that already supports XMP. For example, a full VIDA record in XMP may look like:
 ```
-<vida vida="1" ka="rsa" da="sha256" d="default.vida.hackerfactor.com" c="This is a comment" copy="Copyright 2024 (C) Hacker Factor" b="-s,s-" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
+<vida vida="1" ka="rsa" da="sha256" d="default.vida.hackerfactor.com" c="This is a comment" copy="Copyright 2024 (C) Hacker Factor" b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
 ```
 or
 ```
 <vida>vida="1" ka="rsa" da="sha256"
 d="default.vida.hackerfactor.com"
 c="This is a comment" copy="Copyright 2024 (C) Hacker Factor"
-b="-s,s-" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="
+b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="
 </vida>
 ```
 This latter format may use quotes or HTML-entities, such as `&quot;`.
@@ -313,8 +308,8 @@ For file formats that may not contain XMP records, the VIDA information may also
 - **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the VIDA record. The atom should use `VIDA`.
 
 A file can contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent VIDA records. If a file is altered and a new VIDA record is added without removing an older one, then there are two options:
-- If the first chunk uses the full file range, such as `b=-s,s-`, then the older VIDA signature should fail to validate but the second VIDA record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous VIDA record was invalid.
-- If the first chunk does not cover the appended information, such as `b=-s` or `b=p-s`, then the appended information only needs to sign the appended data, such as `b=p-s`. However, nothing prevents the appended signature from covering the entire file, such as `b=-s,s-`.
+- If the first chunk uses the full file range, such as `b=~S,s~`, then the older VIDA signature should fail to validate but the second VIDA record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous VIDA record was invalid.
+- If the first chunk does not cover the appended information, such as `b=~S` or `b=p~S`, then the appended information only needs to sign the appended data, such as `b=p~S`. However, nothing prevents the appended signature from covering the entire file, such as `b=~S,s~`.
 
 ### Container Formats
 Many file formats act as containers.
@@ -322,8 +317,8 @@ Many file formats act as containers.
 - The inner "contained" files may have their own VIDA records. For those nested files, any internal VIDA record's range is limited to the scope of the contained file and NOT the parent container.
 
 For example, a JPEG may contain an EXIF record that can contain another JPEG as a preview image.
-- The VIDA record in the preview image is limited to the contents of the preview image. The VIDA entry `b=-s,s-` specifies a range from the start of the preview image to the end of the preview image.
-- The VIDA record in the containing JPEG covers the entire JPEG. The VIDA entry `b=-s,s-` covers the entire JPEG, including the contained preview image. The range `b=p-s` does NOT begin at the VIDA record in the contained preview image.
+- The VIDA record in the preview image is limited to the contents of the preview image. The VIDA entry `b=~S,s~` specifies a range from the start of the preview image to the end of the preview image.
+- The VIDA record in the containing JPEG covers the entire JPEG. The VIDA entry `b=~S,s~` covers the entire JPEG, including the contained preview image. The range `b=p~S` does NOT begin at the VIDA record in the contained preview image.
 
 ## Metadata Signature to DNS Matching
 A single hostname in DNS may have multiple TXT VIDA records. When looking up a DNS record:

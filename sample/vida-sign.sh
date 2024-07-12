@@ -85,7 +85,7 @@ cp "$INFILE" "$OUTFILE"
 # Create the file with a placeholder for the signature
 # The place holder is "0123456789..." for 128 characters encoded as base64
 if [ "$VERBOSE" == "1" ] ; then echo "Adding placeholder VIDA record" ; fi
-exiftool -config exiftool-vida.config  -overwrite_original -VIDA="vida=\"1\" b=\"-s,s-\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
+exiftool -config exiftool-vida.config  -overwrite_original -VIDA="vida=\"1\" b=\"~S,s~\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
 
 # Identify where the placeholder is located
 if [ "$VERBOSE" == "1" ] ; then echo "Identifying signature location" ; fi
@@ -104,7 +104,7 @@ if [ "$VERBOSE" == "1" ] ; then echo "Signature in file: $siglen bytes from offs
 # 4. Replace the signature placeholder with the real signature.
 gotsig=$(
 (
-# TBD: Parse the b=range; for now, assume b=-s,s-
+# TBD: Parse the b=range; for now, assume b=~S,s~
 # Everything before the signature
 dd if="$OUTFILE" bs=1 count="$sigstart" 2>/dev/null
 # Everything after the signature
@@ -124,7 +124,7 @@ sed -i -e "s@$PLACEHOLDER@$gotsig@" "$OUTFILE"
 if [ "$VERBOSE" == "1" ] ; then
 checksig=$(
 (
-# TBD: Parse the b=range; for now, assume b=-s,s-
+# TBD: Parse the b=range; for now, assume b=~S,s~
 # Everything before the signature
 dd if="$OUTFILE" bs=1 count="$sigstart" 2>/dev/null
 # Everything after the signature

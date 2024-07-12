@@ -2,7 +2,7 @@
 # VIDA verify: check a VIDA signature.
 # TBD:
 #   Add support for parsing the various parameters.
-#   This code currently assumes the default: vida=1, ka=rsa, sf=hex, -b=-s,s-
+#   This code currently assumes the default: vida=1, ka=rsa, sf=hex, b=~S,s~
 #   It also has vulnerabilities in case of unchecked quoted variables.
 #   THIS IS FOR TESTING and PROOF-OF-CONCEPT DEMO ONLY.
 
@@ -122,7 +122,7 @@ if [ "$VERBOSE" == "1" ] ; then echo "Public key from DNS: $pubkey" ; fi
 
 #######################################
 # Compute the current digest
-#   TBD: Add support for any b= value. Currently assumes b=-s,s-
+#   TBD: Add support for any b= value. Currently assumes b=~S,s~
 
 # Find out where the signature starts
 sigstart=$(grep --byte-offset --only-matching --text "$sig" "$INFILE")
@@ -147,7 +147,7 @@ echo "$sig" | openssl base64 -d > "$SigFile"
 
 # See if they match!
   (
-  # TBD: Parse the b=range; for now, assume b=-s,s-
+  # TBD: Parse the b=range; for now, assume b=~S,s~
   # everything up to the signature
   dd if="$INFILE" bs=1 count=$sigstart 2>/dev/null
   # everything after the signature
