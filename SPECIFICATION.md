@@ -60,7 +60,7 @@ With VIDA:
    - If the signature matches, then the file is authenticated and validated. If the signature does not match, then the file is tampered or forged, and explicitly untrusted.
 
 ## About RSA Signing
-The RSA algorithm (named after the inventors, Rivest, Shamir, and Adleman) is the default cryptographic algorithm. RSA uses a public and private key pair.
+The RSA algorithm (named after the inventors, Rivest, Shamir, and Adleman) uses a public and private key pair.
 - Any data encrypted with the private key can only be decrypted with the public key.
 - Any data encrypted with the public key can only be decrypted with the private key.
 
@@ -104,7 +104,7 @@ The public key is stored in a DNS record. This requires access to a domain's DNS
 
 The DNS entry MUST contain a series of field=value pairs. The defined fields are:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST be the first text in the TXT record.
-- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". For elliptic curve algorithms, use "ka=ec".
+- `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. For RSA, use "rsa". For elliptic curve algorithms, use "ka=ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, limited punctuation, and quotes or no spaces).
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. When not present, the default value is an empty string: `uid=''`. The string cannot contain single-quote ('), double-quote ("), or space characters.
 - `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
@@ -117,7 +117,7 @@ DNS has a limit of 255 bytes per text string. Longer VIDA records can be split i
 
 A complete DNS record may look like:
 ```
-vida.example.com TXT vida=1 p="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA43KBD2MSnczlYRZJqS9BPjwFK1o+obHy" "oV2II2R2jbug91wzBfUU+uJm3iYbfQWz7CJ5fbzN+OQT+sXM5PjdjCPKI/4o+h58QqBlF8JrS5ip" "QwZtJfgvd7UKYxvL4trDTeU7zqShTHygMNibn9LzcwhHQ2MJvuq76V6W6lobab56oHQjwvH3Rqqw" "YJtOpr3qt3+oIq5Ex++GD9DYuJDQce2KNhAd8zLb8Y0fzpvOEQaOTG6vgnoWJlIWFAkZaHlI5ie2" "lI3YYX5z9+j9wucCEfu3fdm7nB4VzTGyW3D7zdFyMbEbhY6jPv+0k7IWWS5QV8DpTkgPj0VU5Xxw" "ty6cGQIDAQAB"
+vida.example.com TXT vida=1 ka=rsa p="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA43KBD2MSnczlYRZJqS9BPjwFK1o+obHy" "oV2II2R2jbug91wzBfUU+uJm3iYbfQWz7CJ5fbzN+OQT+sXM5PjdjCPKI/4o+h58QqBlF8JrS5ip" "QwZtJfgvd7UKYxvL4trDTeU7zqShTHygMNibn9LzcwhHQ2MJvuq76V6W6lobab56oHQjwvH3Rqqw" "YJtOpr3qt3+oIq5Ex++GD9DYuJDQce2KNhAd8zLb8Y0fzpvOEQaOTG6vgnoWJlIWFAkZaHlI5ie2" "lI3YYX5z9+j9wucCEfu3fdm7nB4VzTGyW3D7zdFyMbEbhY6jPv+0k7IWWS5QV8DpTkgPj0VU5Xxw" "ty6cGQIDAQAB"
 ```
 
 The hostname does *not* need to contain "vida". The only requirement is that it must be a valid DNS name *and* must match the domain name specified in the metadata signature.
@@ -138,7 +138,7 @@ The VIDA metadata format is very similar to the DNS entry format. It consists of
 
 The fields are as follows:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST be the first text in the VIDA record.
-- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". For elliptic curve algorithms, use "ec".
+- `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. For now, you can expect "rsa". For elliptic curve algorithms, use "ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, and limited punctuation; no spaces).
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST be a NIST-approved algorithm. Current supported values are:
   - "sha256": The default value.
@@ -222,7 +222,7 @@ The signer does not need to be the same system that is populating the VIDA recor
 
 The remote signer DOES NOT require a copy of the file! This provides content privacy. The remote signer only needs:
 - `vida=1` (Required) This specifies a VIDA record for version 1 (the current version). This MUST match the DNS entry for the public key.
-- `ka=rsa` (Optional) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. By default, it is "rsa". This MUST match the DNS entry for the public key.
+- `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. This MUST match the DNS entry for the public key.
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". This MUST match the DNS entry for the public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. This MUST match the DNS entry for the public key.
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST match the `da=` entry in the metadata.
@@ -301,7 +301,7 @@ This latter format may use quotes or HTML-entities, such as `&quot;`.
 
 A minimal XMP example omits fields, relying on the default values, such as:
 ```
-<vida d="default.vida.hackerfactor.com" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q"/>
+<vida d="default.vida.hackerfactor.com" ka="rsa" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q"/>
 ```
 NOTE: The minimal example doesn't have the same VIDA fields as the full example, so the bytes covered by the range are different, resulting in a different signature.
 
@@ -329,7 +329,7 @@ For example, a JPEG may contain an EXIF record that can contain another JPEG as 
 A single hostname in DNS may have multiple TXT VIDA records. When looking up a DNS record:
 - The hostname must match the name specified in the metadata signature.
 - The `vida=` version must match the name specified in the metadata signature.
-- The `ka=` key algorithm must match the value in the metadata signature. If `ka` is not defined in the DNS or VIDA record, then it is assumed to be `ka=rsa`.
+- The `ka=` key algorithm must match the value in the metadata signature.
 - The `kv=` key version must match the name specified in the metadata signature. If `kv` is not defined in the DNS or VIDA record, then it is assumed to be `kv=1`.
 - The `uid=` identifier must match the `uid=` specified in the metadata signature. If `uid` is not defined in the DNS or VIDA record, then it is assumed to be an empty value (`uid=""`).
 
