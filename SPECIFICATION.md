@@ -128,6 +128,7 @@ The VIDA metadata format is very similar to the DNS entry format. It consists of
 - Multiple field=value pairs separated by a single space.
 - There MUST NOT be any spaces around the equal sign.
 - Any value that contains spaces must be quoted.
+- Binary data must not be quoted.
 - The values may be quoted with single quotes ['] or double quotes ["]; "smartquotes" and other quoting characters are not permitted. The quote mark that begins the value must also be used to end the value. E.g., "valid", and 'valid', but 'invalid".
 - Unless specified, the valid character set is:
   - All ASCII letters [A-Za-z] and numbers [0-9]
@@ -180,7 +181,7 @@ The fields are as follows:
     - `date2:` specifies one decimal point, such as "20240326164401.50" and accuracy to within 0.005 seconds.
     - `date3:` specifies one decimal point, such as "20240326164401.500" and accuracy to within 0.0005 seconds. While this `date3` example is numerically equivalent to the `date1` example, they differ in the specified accuracy.
 - `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length or cannot be determined based on the VIDA record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary.
-- `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record.
+- `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record. If in binary format, the signature must not be quoted.
 
 A sample VIDA signature may look like:
 ```
