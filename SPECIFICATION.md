@@ -156,13 +156,14 @@ The fields are as follows:
     - 'F' denotes the beginning of the file. This is equivalent to "0".
     - 'f' denotes the end of the file.
     - 'S' denotes the beginning of the signature.
-    - 's' denotes the end of the signature. If `b=` is not defined, then the default range is `b=F~S,s~f`.
+    - 's' denotes the end of the signature. (after the optionally present padding)
     - 'P' denotes the beginning of the previous signature. This is useful when a file contains multiple signatures, such as with a periodically-signed video stream. If there is no previous signature, then this is equivalent to zero (0). 
     - 'p' denotes the end of the previous signature. If there is no previous signature, then this is equivalent to zero (0). 
   - Any literal character may be combined with simple arithmetic offsets.
     - For example: `b=F+4~S,s~f-20` This defines two ranges. The first begins 4 bytes into the file and ends at the start of the signature. The second begins after the signature and ends 20 bytes before the end of the file.
     - As another example, PNG files use chunks that end with a four-byte checksum. The checksum is not known until after the signature is computed. As a result, the byte range must exclude the PNG chunk's checksum. After the checksum is computed and inserted into the file, the chunk checksum must be updated. Assuming that the signature ends at the end of the chunk, the range can use `b=F~S,s+4~f` to exclude the signature and PNG checksum.
     - A streaming video may insert VIDA records using `b=p~S` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last VIDA entry should probably contain `b=p~S,s~f` to sign from the previous signature to the current signature and from the current signature to the end of the file.
+  - If `b=` is not defined, then the default range is `b=F~S,s~f`.
 - `d=domain`: The domain name containing the DNS TXT record for the VIDA public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
@@ -180,8 +181,8 @@ The fields are as follows:
     - `date1:` specifies one decimal point, such as "20240326164401.5" and accuracy to within 0.05 seconds.
     - `date2:` specifies one decimal point, such as "20240326164401.50" and accuracy to within 0.005 seconds.
     - `date3:` specifies one decimal point, such as "20240326164401.500" and accuracy to within 0.0005 seconds. While this `date3` example is numerically equivalent to the `date1` example, they differ in the specified accuracy.
-- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if the signature may have a variable length or cannot be determined based on the VIDA record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary.
-- `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record. If in binary format, the signature must not be quoted.
+- `sl=hex` (Optional) The **s**ignature **l**ength. This is only required if padding is applied or the length of a signature is variable or cannot be determined based on the VIDA record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary. If the signature is in base64 or hexadecimal format and padding is needed, this field SHOULD be included to prevent tampering with the padding.
+- `s=signature` (Required) The computed signature for the VIDA record. This MUST be last value in the VIDA record. If in binary format, the signature must not be quoted. If in base64 or hexadecimal format, the signature may be padded with spaces.
 
 A sample VIDA signature may look like:
 ```
