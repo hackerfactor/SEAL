@@ -13,7 +13,7 @@ Although the nomenclature is format-specific, the basic concept is the same:
 - The VIDA record must not be split between data sections; it must be fully contained within one data section.
 - Some data sections permit nesting other media files that may contain their own VIDA records. The scope of the VIDA record (the range `F~f`) is limited to the self-contained file. A nested image's range only covers the nested image.
 
-Processing VIDA records requires parsing the high-level file format. However, it MUST NOT require parsing nested data blocks or having a detailed understanding of the containing structure. For example, many of these storage areas support scanning the data section's range for a VIDA record using a regular expression: @<vida vida=[0-9]+[^>]\* s=[^>]+/>@
+Processing VIDA records requires parsing the high-level file format. However, it MUST NOT require parsing nested data blocks or having a detailed understanding of the containing structure. For example, many of these storage areas support scanning the data section's range for a VIDA record using a regular expression: `@<vida vida=[0-9]+[^>]\* s=[^>]+/>@`
 
 ## EXIF
 EXIF is a common metadata structure found in many different file formats. It uses two-byte identifiers ("tag") with offsets to the identifier's data within the EXIF block.
@@ -49,7 +49,7 @@ PNG stores data in 'chunks'. Each chunk includes:
 Each chunk includes a checksum, so VIDA's `b=` byte range must exclude the chunk's checksum. A byte range for PNG might look like `b=F~S,S~s+4,s+8~f` to skip over PNG's 4-byte chunk checksum.
 
 The VIDA signature can be stored in a variety of chunks:
-- A text chunk (iTXt, tEXt, iTXT, and tEXT). These may contain actual text or complex data such as an XMP record. For processing, VIDA looks for any substring that could indicate a VIDA signature. It should match the regular expression: @<vida vida=[0-9]+[^>]\* s=[^>]+/>@
+- A text chunk (iTXt, tEXt, iTXT, and tEXT). These may contain actual text or complex data such as an XMP record. For processing, VIDA looks for any substring that could indicate a VIDA signature. It should match the regular expression: `@<vida vida=[0-9]+[^>]\* s=[^>]+/>@`
 - VIDA data cannot be stored in any compressed chunk (e.g., iTXz or zTXt, zTXT). This is because the compression will change the data covered by the VIDA signature.
 , EXIF (eXIf or eXIF) store EXIF data and should be processed using the EXIF rules. (VIDA can be stored in an EXIF comment field.)
 - A VIDA-specific chunk (vIDa and vIDA).
@@ -160,5 +160,5 @@ The VIDA record must be stored as a top-level element (not nested):
 - The data contains the VIDA record `<vida ... />`.
 
 ## Unknown file formats
-Unknown text file formats may include a VIDA record. The record must match the VIDA regular expression: @<vida vida=[0-9]+[^>]* s=[^>]+/>@
+Unknown text file formats may include a VIDA record. The record must match the VIDA regular expression: `@<vida vida=[0-9]+[^>]* s=[^>]+/>@`
 
