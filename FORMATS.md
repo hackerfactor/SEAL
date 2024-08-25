@@ -70,6 +70,8 @@ The maximum JPEG APP block data size is 65,533 bytes. Data that is larger than o
 
 When the VIDA verifying system detects the signature offsets (range `S~s`), is should make sure the length of the signature matches the expected signature length. A signature range that differs from the expected length should immediately be rejected as a failed signature.
 
+**NOTE:** Some JPEG extensions do not follow the JPEG standard. Rather than using self-contained APP blocks, they may use pointers to absolute file positions located after the end of the file. These non-standard extensions include MPF and some MakerNotes. Adding in a signature will likely make the absolute pointer locations reference the wrong area. While it is desirable to fix these offsets if they are known, VIDA is *not* required to retain or correct non-standard JPEG extensions.
+
 ## GIF
 The GIF format only supports comments and are limited to 255 bytes per comment.
 - The VIDA signature MUST fit within a single comment block. (Elliptic curve signatures with base64 encoding are recommended since it's a smaller signature size than RSA with hex encoding.)
