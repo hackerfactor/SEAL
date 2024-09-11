@@ -1,22 +1,22 @@
-# Verifiable Identity using Distributed Authentication (VIDA)
-Version 1, 2-April-2024
+# Secure Evidence Attribution Label (SEAL)
+Version 1, 7-Sept-2024
 
-VIDA is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats. It provides:
+SEAL is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats. It provides:
 - **Attribution**: The signature is attributed to a user or domain name.
 - **Validation**: The signature is cryptographically signed and covers the bytes in the file. If the file is altered after signing, then the signature will not match.
 - **Authentication**: The strong cryptographic signature ensures that the signature is authentic. A malicious user cannot falsely attribute a signature to someone else.
-- **Provenance**: Provenance identifies how a file was created or handled. While VIDA does not directly include this information, other common metadata formats, including EXIF, IPTC, and XMP readily provide this type of detail. VIDA permits signing the existing provenance information, preventing it from being altered after it was digitally signed.
-- **Notarized**: VIDA supports using third-party signatures that notarize when a file was digitally signed.
+- **Provenance**: Provenance identifies how a file was created or handled. While SEAL does not directly include this information, other common metadata formats, including EXIF, IPTC, and XMP readily provide this type of detail. SEAL permits signing the existing provenance information, preventing it from being altered after it was digitally signed.
+- **Notarized**: SEAL supports using third-party signatures that notarize when a file was digitally signed.
 - **Nonrepudiation**: A valid signature can only be provided by the signer. The signer cannot claim that their private key did not create the signature. This prevents false denials.
 - **Decentralization**: There is no single vendor who is critical path to the signing or validation process. The public keys are stored in DNS, which is a decentralized service.
 - **Privacy**: The public keys are stored in DNS, which uses request relaying. Even if you run the authoritative DNS server, most DNS requests are relayed; the authoritative DNS server does not know the IP address of anyone who is trying to validate a signature. Moreover, due to DNS caching, the authoritative server may not know each time someone tries to authenticate a signature.
 - **Revocation**: If a private key is compromised, it can be revoked by updating the DNS entry.
 - **Small**: Most signatures are smaller than 500 bytes.
-- **Free**: There is no added cost required to implement or use this solution. VIDA does require a domain name for storing the public key(s). However, that is an existing expense for doing work on the internet. For users who do not have a domain name, we expect new vendors to support user validation with signatures.
+- **Free**: There is no added cost required to implement or use this solution. SEAL does require a domain name for storing the public key(s). However, that is an existing expense for doing work on the internet. For users who do not have a domain name, we expect new vendors to support user validation with signatures.
 
-What VIDA does **not** provide:
-- **Content Verification**: The visual, audio, textual, and existing metadata content is not validated by VIDA. VIDA only ensures that the content is not tampered after being signed, and the signature is not falsely attributed.
-- **Historical Information**: The pedigree of the file, such as the included components or versions, are not recorded by VIDA. VIDA only provides the last known signature. Other metadata formats, including EXIF, XMP, and MPF, are often used to record historical information. (VIDA does not replicate the work of other existing metadata formats.)
+What SEAL does **not** provide:
+- **Content Verification**: The visual, audio, textual, and existing metadata content is not validated by SEAL. SEAL only ensures that the content is not tampered after being signed, and the signature is not falsely attributed.
+- **Historical Information**: The pedigree of the file, such as the included components or versions, are not recorded by SEAL. SEAL only provides the last known signature. Other metadata formats, including EXIF, XMP, and MPF, are often used to record historical information. (SEAL does not replicate the work of other existing metadata formats.)
 
 ## Problem Space and Solution Approach
 Whether it is AI-generated photos, deep fake videos, altered imagery (e.g., "photoshop"), or a direct-from-the-camera original, there is a growing need to provide proper attribution to media.
@@ -29,7 +29,7 @@ A number of solutions have been widely adopted to combat spam. These include:
 
 Today, if you send email, then you are very likely using both SPF and DKIM, even if you don't realize it.
 
-In my opinion, the anti-spam efforts got it right. VIDA applies DKIM to any file format (media), rather than being restricted to only email (as is the case with DKIM).
+In my opinion, the anti-spam efforts got it right. SEAL applies DKIM to any file format (media), rather than being restricted to only email (as is the case with DKIM).
 
-For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how VIDA compares to other validation, authentication, and provenance solutions.
+For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how SEAL compares to other validation, authentication, and provenance solutions.
 
