@@ -145,14 +145,15 @@ echo "$pubkey" | openssl base64 -d > "$PubFile"
 SigFile="$INFILE.sig"
 echo "$sig" | openssl base64 -d > "$SigFile"
 
+if [ "$VERBOSE" == "1" ] ; then openssl version ; fi
 # See if they match!
   (
   # TBD: Parse the b=range; for now, assume b=~S,s~
   # everything up to the signature
-  dd if="$INFILE" bs=1 count=$sigstart 2>/dev/null
+  dd if="$INFILE" bs=1 count=$sigstart status=none 2>/dev/null
   # everything after the signature
-  dd if="$INFILE" bs=1 skip=$sigend 2>/dev/null
-  ) | openssl dgst -sha256 -verify "$PubFile" -signature "$SigFile"
+  dd if="$INFILE" bs=1 skip=$sigend status=none 2>/dev/null
+  ) | openssl dgst -sha256 -keyform der -verify "$PubFile" -signature "$SigFile" -binary
 # Openssl will say whether it is validated
 
 # Clean up

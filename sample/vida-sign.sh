@@ -85,7 +85,7 @@ cp "$INFILE" "$OUTFILE"
 # Create the file with a placeholder for the signature
 # The place holder is "0123456789..." for 128 characters encoded as base64
 if [ "$VERBOSE" == "1" ] ; then echo "Adding placeholder VIDA record" ; fi
-exiftool -config exiftool-vida.config  -overwrite_original -VIDA="vida=\"1\" b=\"~S,s~\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
+exiftool -config exiftool-vida.config  -overwrite_original -VIDA="vida=\"1\" b=\"F~S,s~f\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
 
 # Identify where the placeholder is located
 if [ "$VERBOSE" == "1" ] ; then echo "Identifying signature location" ; fi
@@ -126,9 +126,9 @@ checksig=$(
 (
 # TBD: Parse the b=range; for now, assume b=~S,s~
 # Everything before the signature
-dd if="$OUTFILE" bs=1 count="$sigstart" 2>/dev/null
+dd if="$OUTFILE" bs=1 count="$sigstart" status=none 2>/dev/null
 # Everything after the signature
-dd if="$OUTFILE" bs=1 skip="$sigend" 2>/dev/null
+dd if="$OUTFILE" bs=1 skip="$sigend" status=none 2>/dev/null
 ) | openssl dgst -sha256 -sign "$PRIVATEKEY" | openssl base64 | tr -d '\n'
 )
 echo "Verified signature: $checksig"
