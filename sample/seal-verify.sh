@@ -106,7 +106,7 @@ if [ "$VERBOSE" == "1" ] ; then echo "Signature from file: $sig" ; fi
 
 # Look for any TXT records that are for seal=1 and not revoked
 # DNS might break long lines "abcdef" into "abc" "def". Use sed to recombine them.
-dns=$(dig TXT "$domain" @8.8.8.8 | grep TXT | grep 'seal=1' | grep 'ka=rsa' | grep -v ' r=' | sed -e 's@" "@@g')
+dns=$(dig TXT "$domain" | grep TXT | grep 'seal=1' | grep 'ka=rsa' | grep -v ' r=' | sed -e 's@" "@@g')
 if [ "$dns" == "" ] ; then
   echo "ERROR: No SEAL public key found at $domain"
   exit 1
