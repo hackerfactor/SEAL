@@ -1,14 +1,14 @@
 #!/bin/bash
-# VIDA verify: check a VIDA signature.
+# SEAL verify: check a SEAL signature.
 # TBD:
 #   Add support for parsing the various parameters.
-#   This code currently assumes the default: vida=1, ka=rsa, sf=hex, b=~S,s~
+#   This code currently assumes the default: seal=1, ka=rsa, sf=hex, b=~S,s~
 #   It also has vulnerabilities in case of unchecked quoted variables.
 #   THIS IS FOR TESTING and PROOF-OF-CONCEPT DEMO ONLY.
 
 # Requires:
 #   "$1" = signed file
-#   The domain to query comes from DNS and the VIDA d= parameter.
+#   The domain to query comes from DNS and the SEAL d= parameter.
 #   dig retrieves the DNS TXT field.
 #   sed for formatting the dig result
 #   exiftool for extracting XMP record
@@ -68,33 +68,33 @@ INFILE="$1"
 if [ "$VERBOSE" == "1" ] ; then echo "INFILE: $INFILE" ; fi
 
 #######################################
-# Extract the VIDA record.
-#   - Make sure the VIDA record exists
+# Extract the SEAL record.
+#   - Make sure the SEAL record exists
 #   - Retrieve the domain name
 #   - Retrieve the signature
 #   TBD: This uses XMP. Add support for PNG, JPEG APP, and other formats.
-vida=$(exiftool -xmp:vida "$INFILE")
-if [ "$vida" == "" ] ; then
-  echo "No VIDA record found in $INFILE"
+seal=$(exiftool -xmp:seal "$INFILE")
+if [ "$seal" == "" ] ; then
+  echo "No SEAL record found in $INFILE"
   exit 0
 fi
 
 # Find the domain
 domain=""
-if [[ "$vida" =~ ^.*\ d=[\"\']?([0-9a-zA-Z.-]+) ]] ; then
+if [[ "$seal" =~ ^.*\ d=[\"\']?([0-9a-zA-Z.-]+) ]] ; then
   domain=${BASH_REMATCH[1]}
 else
-  echo "ERROR: No domain name found in VIDA record."
+  echo "ERROR: No domain name found in SEAL record."
   exit 1
 fi
 if [ "$VERBOSE" == "1" ] ; then echo "Domain from file: $domain" ; fi
 
 # Find the signature
 sig=""
-if [[ "$vida" =~ ^.*\ s=[\"\']?([0-9a-zA-Z+/]+=*) ]] ; then
+if [[ "$seal" =~ ^.*\ s=[\"\']?([0-9a-zA-Z+/]+=*) ]] ; then
   sig=${BASH_REMATCH[1]}
 else
-  echo "ERROR: No signature found in VIDA record."
+  echo "ERROR: No signature found in SEAL record."
   exit 1
 fi
 if [ "$VERBOSE" == "1" ] ; then echo "Signature from file: $sig" ; fi
@@ -104,18 +104,18 @@ if [ "$VERBOSE" == "1" ] ; then echo "Signature from file: $sig" ; fi
 #   TBD: Make sure the TXT record is the correct TXT record.
 #   TBD: Support the different sf= values.
 
-# Look for any TXT records that are for vida=1 and not revoked
+# Look for any TXT records that are for seal=1 and not revoked
 # DNS might break long lines "abcdef" into "abc" "def". Use sed to recombine them.
-dns=$(dig TXT "$domain" | grep TXT | grep 'vida=1' | grep 'ka=rsa' | grep -v ' r=' | sed -e 's@" "@@g')
+dns=$(dig TXT "$domain" @8.8.8.8 | grep TXT | grep 'seal=1' | grep 'ka=rsa' | grep -v ' r=' | sed -e 's@" "@@g')
 if [ "$dns" == "" ] ; then
-  echo "ERROR: No VIDA public key found at $domain"
+  echo "ERROR: No SEAL public key found at $domain"
   exit 1
 fi
 
 if [[ "$dns" =~ ^.*\ p=[\"\']?([0-9a-zA-Z+/]+) ]] ; then
   pubkey=${BASH_REMATCH[1]}
 else
-  echo "ERROR: No VIDA public key found in DNS record."
+  echo "ERROR: No SEAL public key found in DNS record."
   exit 1
 fi
 if [ "$VERBOSE" == "1" ] ; then echo "Public key from DNS: $pubkey" ; fi

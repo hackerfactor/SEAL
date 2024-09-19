@@ -1,5 +1,5 @@
 #!/bin/bash
-# VIDA sign: sign a file.
+# SEAL sign: sign a file.
 # Requires:
 #   "$1" = private key
 #   "$2" = unsigned input file
@@ -84,8 +84,8 @@ cp "$INFILE" "$OUTFILE"
 
 # Create the file with a placeholder for the signature
 # The place holder is "0123456789..." for 128 characters encoded as base64
-if [ "$VERBOSE" == "1" ] ; then echo "Adding placeholder VIDA record" ; fi
-exiftool -config exiftool-vida.config  -overwrite_original -VIDA="vida=\"1\" b=\"F~S,s~f\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
+if [ "$VERBOSE" == "1" ] ; then echo "Adding placeholder SEAL record" ; fi
+exiftool -config exiftool-seal.config  -overwrite_original -SEAL="seal=\"1\" b=\"F~S,s~f\" d=\"$DOMAIN\" ka=\"rsa\" s=\"$PLACEHOLDER\"" "$OUTFILE" > /dev/null 2>&1
 
 # Identify where the placeholder is located
 if [ "$VERBOSE" == "1" ] ; then echo "Identifying signature location" ; fi
@@ -141,5 +141,5 @@ fi
 
 fi
 
-echo "DONE! $OUTFILE is signed using VIDA!"
+echo "DONE! $OUTFILE is signed using SEAL!"
 
