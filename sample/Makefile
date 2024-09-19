@@ -9,9 +9,9 @@
 # Specify your domain name
 DOMAIN=example.com
 # Specify the source/original file
-FILEORIG=kangaroo-unsigned.jpg
+FILEORIG=image-unsigned.jpg
 # Specify the SEAL-signed output file
-FILESIGNED=kangaroo-signed.jpg
+FILESIGNED=image-signed.jpg
 #######################################################
 
 
