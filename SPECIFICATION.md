@@ -1,5 +1,5 @@
 # SEAL Specification
-Version 1.1.3, 7-September-2024
+Version 1.1.4, 5-October-2024
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
@@ -115,6 +115,7 @@ The DNS entry MUST contain a series of field=value pairs. The defined fields are
 For revocation:
 - `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
 - `p=`, `p=revoke`, or no `p=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
+- If both `r=` is present and `p=` denotes a revocation, then `r=` must be ignored and all keys are revoked. This is because there is no public key available for validating pre-revocation signatures.
 
 DNS has a limit of 255 bytes per text string. Longer SEAL records can be split into strings. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
 
@@ -305,6 +306,21 @@ A minimal XMP example omits fields, relying on the default values, such as:
 <seal d="seal.hackerfactor.com" ka="rsa" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q"/>
 ```
 NOTE: The minimal example doesn't have the same SEAL fields as the full example, so the bytes covered by the range are different, resulting in a different signature.
+
+### Appending vs Finalized
+The `b=` range for determining the digest permits specifying the start and end of the file (`F`...`f`) or previous signature (`P`...`p`). This is because some file formats permit appending data, such as validating a video or audio stream.
+
+- The first signature SHOULD reference the start of the file (`F`). This prevents prepending data. However, because the SEAL record must end with at least two bytes after the signature (`/>`), it is unlikely that data can be prepended without invalidating the next signature.
+- The last signature should finalize the file by referencing the end of the file (`f`). This prevents any addition data.
+
+This approach is similar to the method used for writing to CD or DVD discs. With these write-one-read-many (WORM) drives, users can append as much as they want, but eventually the disc must be finalized. You cannot append to a finalized disc.
+
+Signing applications MUST scan the media for prior signatures.
+- If any signature is finalized (with `b=` referencing `f`), then another signature cannot be included.
+- File formats that do not permit appending, such as PNG or JPEG, MUST always be finalized.
+- File formats that permit appending, such as AJPEG (animated jpeg; common for low-end video camera) or MPEG (for streaming video), do not require any finalized ranges. The finalized range SHOULD only be provided when the stream ends.
+- Any new signature MUST be inserted *after* all previous signatures. This prevents the new signature from invalidating any previous signature.
+- For appending (not finalizing), the `b=` range SHOULD reference all data up to the next appending point. At minimum, this should include the end of the SEAL record. For example, `b=p~S,s~s+6` will span from the previous signature to the current signature *and* covers 6 bytes after the end of the current signature.
 
 ### File-specific Formats
 For file formats that may not contain XMP records, the SEAL information may also be stored in SEAL-specific data blocks:
