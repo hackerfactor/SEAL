@@ -166,7 +166,7 @@ The fields are as follows:
   - Any literal character may be combined with simple arithmetic offsets.
     - For example: `b=F+4~S,s~f-20` This defines two ranges. The first begins 4 bytes into the file and ends at the start of the signature. The second begins after the signature and ends 20 bytes before the end of the file.
     - As another example, PNG files use chunks that end with a four-byte checksum. The checksum is not known until after the signature is computed. As a result, the byte range must exclude the PNG chunk's checksum. After the checksum is computed and inserted into the file, the chunk checksum must be updated. Assuming that the signature ends at the end of the chunk, the range can use `b=F~S,s+4~f` to exclude the signature and PNG checksum.
-    - A streaming video may insert SEAL records using `b=p~S` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last SEAL entry should probably contain `b=p~S,s~f` to sign from the previous signature to the current signature and from the current signature to the end of the file.
+    - A streaming video may insert SEAL records using `b=P~S` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last SEAL entry SHOULD contain `b=P~S,s~f` to sign from the previous signature to the current signature and from the current signature to the end of the file.
   - If `b=` is not defined, then the default range is `b=F~S,s~f`.
 - `d=domain`: The domain name containing the DNS TXT record for the SEAL public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
@@ -320,18 +320,19 @@ Signing applications MUST scan the media for prior signatures.
 - File formats that do not permit appending, such as PNG or JPEG, MUST always be finalized.
 - File formats that permit appending, such as AJPEG (animated jpeg; common for low-end video camera) or MPEG (for streaming video), do not require any finalized ranges. The finalized range SHOULD only be provided when the stream ends.
 - Any new signature MUST be inserted *after* all previous signatures. This prevents the new signature from invalidating any previous signature.
-- For appending (not finalizing), the `b=` range SHOULD reference all data up to the next appending point. At minimum, this should include the end of the SEAL record. For example, `b=p~S,s~s+6` will span from the previous signature to the current signature *and* covers 6 bytes after the end of the current signature.
+- For appending (not finalizing), the `b=` range SHOULD reference all data up to the next appending point. At minimum, this should include the end of the SEAL record. For example, `b=P~S,s~s+6` will span from the previous signature to the current signature *and* covers 6 bytes after the end of the current signature.
+- To retain integrity, appended segments MUST overlap signatures (e.g., `b=P~S`) rather than only signing the appended data (e.g., `b=p~S`). The overlap prevents a malicious user from replacing a signed data segment without detection. Non-overlapping signatures (e.g., `b=p~S`) SHOULD only be used when each appended segment is independent.
 
 ### File-specific Formats
 For file formats that may not contain XMP records, the SEAL information may also be stored in SEAL-specific data blocks:
 - **JPEG**: A custom JPEG application record can be used to store the SEAL record. It should be an APP13 block with the label `SEAL`.
-- **PNG**: A custom PNG chunk can be used to store the SEAL record. The PNG chunk should use `seAl`.
+- **PNG**: A custom PNG chunk can be used to store the SEAL record. PNG chunks use capitalization to determine whether a chunk is required or safe-for-copy. Encoders SHOULD use `sEAl`, where the capitalization indicates: not mandatory, public, and safe-to-copy. However, for verifying, any acceptable variation of the capitalization should be considered (SEAL, SEAl, seAl, etc.). PNG may also store the signature in a text or Exif chunk (e.g., teXt, itXt, eXIf).
 - **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
 - **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
 
 A file can contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent SEAL records. If a file is altered and a new SEAL record is added without removing an older one, then there are two options:
 - If the first chunk uses the full file range, such as `b=~S,s~`, then the older SEAL signature should fail to validate but the second SEAL record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous SEAL record was invalid.
-- If the first chunk does not cover the appended information, such as `b=~S` or `b=p~S`, then the appended information only needs to sign the appended data, such as `b=p~S`. However, nothing prevents the appended signature from covering the entire file, such as `b=~S,s~`.
+- If the first chunk does not cover the appended information, such as `b=~S` or `b=P~S`, then the appended information only needs to sign the appended data, such as `b=p~S`. However, nothing prevents the appended signature from covering the entire file, such as `b=~S,s~`.
 
 ### Container Formats
 Many file formats act as containers.
