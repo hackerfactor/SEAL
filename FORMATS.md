@@ -49,8 +49,8 @@ PNG stores data in 'chunks'. Each chunk includes:
 Each chunk includes a checksum, so SEAL's `b=` byte range must exclude the chunk's checksum. A byte range for PNG might look like `b=F~S,S~s+4,s+8~f` to skip over PNG's 4-byte chunk checksum that comes after the signature.
 
 The SEAL signature can be stored in a variety of chunks:
-- A text chunk (iTXt, tEXt, iTXT, and tEXT). These may contain actual text or complex data such as an XMP record. For processing, SEAL looks for any substring that could indicate a SEAL signature. It should match the regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`
-- SEAL data cannot be stored in any compressed chunk (e.g., iTXz or zTXt, zTXT). This is because the compression will change the data covered by the SEAL signature.
+- A text chunk (iTXt, tEXt, iTXT, and tEXT). These may contain actual text or complex data such as an XMP record. For processing, SEAL looks for any substring that could indicate a SEAL signature. It should match the regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`.
+- SEAL data cannot be stored in any compressed chunk (e.g., iTXt with optional compression enabled, zTXt, zTXT). This is because the compression will change the data covered by the SEAL signature.
 , EXIF (eXIf or eXIF) store EXIF data and should be processed using the EXIF rules. (SEAL can be stored in an EXIF comment field.)
 - A SEAL-specific chunk (sEAl and sEAL).
 
