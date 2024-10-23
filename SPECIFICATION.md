@@ -311,26 +311,27 @@ NOTE: The minimal example doesn't have the same SEAL fields as the full example,
 The `b=` range for determining the digest permits specifying the start and end of the file (`F`...`f`) or previous signature (`P`...`p`). This is because some file formats permit appending data, such as validating a video or audio stream.
 
 - The first signature SHOULD reference the start of the file (`F`). This prevents prepending data. However, because the SEAL record must end with at least two bytes after the signature (`/>`), it is unlikely that data can be prepended without invalidating the next signature.
+- Intermediate signatures should reference the start of the prior signature (`P`). This prevents any alterations between adjacent signatures from being undetected.
 - The last signature should finalize the file by referencing the end of the file (`f`). This prevents any addition data.
 
-This approach is similar to the method used for writing to CD or DVD discs. With these write-one-read-many (WORM) drives, users can append as much as they want, but eventually the disc must be finalized. You cannot append to a finalized disc.
+This *finalizing* approach is similar to the method used for writing to CD or DVD discs. With these write-once-read-many (WORM) media sources, users can append as much as they want. However, eventually the disc must be finalized. You cannot append to a finalized disc.
 
 Signing applications MUST scan the media for prior signatures.
-- If any signature is finalized (with `b=` referencing `f`), then another signature cannot be included.
-- File formats that do not permit appending, such as PNG or JPEG, MUST always be finalized.
-- File formats that permit appending, such as AJPEG (animated jpeg; common for low-end video camera) or MPEG (for streaming video), do not require any finalized ranges. The finalized range SHOULD only be provided when the stream ends.
+- If any signature is finalized (with `b=` referencing `f`), then another signature MUST NOT be included.
+- File formats that do not permit appending MUST always be finalized.
+- File formats that permit appending, such as streaming media formats like AJPEG (animated jpeg; common for low-end video camera) and MPEG (for streaming video), do not require any finalized ranges. The finalized range SHOULD only be provided when the stream ends.
 - Any new signature MUST be inserted *after* all previous signatures. This prevents the new signature from invalidating any previous signature.
 - For appending (not finalizing), the `b=` range SHOULD reference all data up to the next appending point. At minimum, this should include the end of the SEAL record. For example, `b=P~S,s~s+6` will span from the previous signature to the current signature *and* covers 6 bytes after the end of the current signature.
-- To retain integrity, appended segments MUST overlap signatures (e.g., `b=P~S`) rather than only signing the appended data (e.g., `b=p~S`). The overlap prevents a malicious user from replacing a signed data segment without detection. Non-overlapping signatures (e.g., `b=p~S`) SHOULD only be used when each appended segment is independent.
+- To retain integrity, appended segments MUST overlap signatures (e.g., `b=P~S`) rather than only signing the appended data (e.g., `b=p~S`). The overlap prevents a malicious user from replacing a signed data segment without detection. Non-overlapping signatures (e.g., `b=p~S`) SHOULD only be used when each appended segment is independent (e.g., hard drive sectors).
 
 ### File-specific Formats
 For file formats that may not contain XMP records, the SEAL information may also be stored in SEAL-specific data blocks:
-- **JPEG**: A custom JPEG application record can be used to store the SEAL record. It should be an APP13 block with the label `SEAL`.
+- **JPEG**: A custom JPEG application record can be used to store the SEAL record. It should be an APP8 or APP9 block with the label `SEAL`. (JPEG assumes that adjacent APP blocks with the same numeric identifier are continuations of the previous data. If the previous JPEG block is APP8, then SEAL should use APP9. Otherwise, it should use APP8.)
 - **PNG**: A custom PNG chunk can be used to store the SEAL record. PNG chunks use capitalization to determine whether a chunk is required or safe-for-copy. Encoders SHOULD use `sEAl`, where the capitalization indicates: not mandatory, public, and safe-to-copy. However, for verifying, any acceptable variation of the capitalization should be considered (SEAL, SEAl, seAl, etc.). PNG may also store the signature in a text or Exif chunk (e.g., teXt, itXt, eXIf).
 - **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
 - **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
 
-A file can contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent SEAL records. If a file is altered and a new SEAL record is added without removing an older one, then there are two options:
+A file may contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent SEAL records. If a file is altered and a new SEAL record is added without removing an older one, then there are two options:
 - If the first chunk uses the full file range, such as `b=~S,s~`, then the older SEAL signature should fail to validate but the second SEAL record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous SEAL record was invalid.
 - If the first chunk does not cover the appended information, such as `b=~S` or `b=P~S`, then the appended information only needs to sign the appended data, such as `b=p~S`. However, nothing prevents the appended signature from covering the entire file, such as `b=~S,s~`.
 

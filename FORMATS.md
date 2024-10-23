@@ -4,6 +4,7 @@ Different file formats support different storage mechanisms. *Where* the SEAL re
 Many common data formats divide the structures into sections.
 - JPEG calls these sections 'blocks'.
 - PNG calls these sections 'chunks'.
+- RIFF (WebP, WebM, WAV, , etc.) calls these sections 'atoms'.
 - BMFF (MP4, MOV, HEIC, HEIF, etc.) calls these sections 'atoms'.
 - Some file formats, like PPM and ZIP, only have headers and data.
 - PDF uses 'objects' and each object has an optional 'dictionary' and 'data'. PDF also has an initial header and ending footer.
@@ -13,7 +14,9 @@ Although the nomenclature is format-specific, the basic concept is the same:
 - The SEAL record must not be split between data sections; it must be fully contained within one data section.
 - Some data sections permit nesting other media files that may contain their own SEAL records. The scope of the SEAL record (the range `F~f`) is limited to the self-contained file. A nested image's range only covers the nested image.
 
-Processing SEAL records requires parsing the high-level file format. However, it MUST NOT require parsing nested data blocks or having a detailed understanding of the containing structure. For example, many of these storage areas support scanning the data section's range for a SEAL record using a regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`
+Processing SEAL records requires parsing the high-level file format. However, it MUST NOT require parsing nested data blocks or having a detailed understanding of the containing structure. For example:
+- Many of these storage areas support scanning the data section's range for a SEAL record using a regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`
+- JPEG APP blocks may contained nested images, such as preview pictures, thumbnail images, or depth maps. Each of these nested images may have their own SEAL signature than only spans the scope of the individual nested image. A JPEG parser must ensure that it does not confused a nested image's SEAL signature with the parent image's signature.
 
 ## EXIF
 EXIF is a common metadata structure found in many different file formats. It uses two-byte identifiers ("tag") with offsets to the identifier's data within the EXIF block.
@@ -31,7 +34,8 @@ Generic validators that do not know about the specifics of EXIF processing may f
 XMP is a common metadata structure found in many different file formats. XMP data uses an XML file format structure. SEAL supports two types of XMP records:
 - `<seal .../>`
 - `<xmp:seal .../>`
-In both cases, the parameters for the tag includes the pre-defined fields from the specification. (E.g., `<xmp:seal b=F~S,s~f d=domain s=*signature*>`)
+- `<xmp:seal> ... </xmp:seal>`
+In each case, the parameters for the tag includes the pre-defined fields from the specification. (E.g., `<xmp:seal b=F~S,s~f d=domain s=*signature*>`)
 
 Some XMP records can contain nested media. (These are usually base64-encoded files.) The nested media may contain its own SEAL signatures. Those signatures are limited to the scope of the nested media. Generic validators that do not know about the specifics of the XMP processing are not required to evaluate XMP's nested media.
 
@@ -49,10 +53,11 @@ PNG stores data in 'chunks'. Each chunk includes:
 Each chunk includes a checksum, so SEAL's `b=` byte range must exclude the chunk's checksum. A byte range for PNG might look like `b=F~S,S~s+4,s+8~f` to skip over PNG's 4-byte chunk checksum that comes after the signature.
 
 The SEAL signature can be stored in a variety of chunks:
-- A text chunk (iTXt, tEXt, iTXT, and tEXT). These may contain actual text or complex data such as an XMP record. For processing, SEAL looks for any substring that could indicate a SEAL signature. It should match the regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`.
+- A text chunk (teXt, teXT, tEXt, tEXT, etc.). These may contain actual text or complex data such as an XMP record. For processing, SEAL looks for any substring that could indicate a SEAL signature. It should match the regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`.
+- An internationalized text chunk (itXt, iTXt, etc.) that is not multi-byte or compressed.
 - SEAL data cannot be stored in any compressed chunk (e.g., iTXt with optional compression enabled, zTXt, zTXT). This is because the compression will change the data covered by the SEAL signature.
 , EXIF (eXIf or eXIF) store EXIF data and should be processed using the EXIF rules. (SEAL can be stored in an EXIF comment field.)
-- A SEAL-specific chunk (sEAl and sEAL).
+- A SEAL-specific chunk (sEAl, sEAL, seAl, etc.).
 
 The PNG chunk type may specify that the chunk's contents can be safely copied during a re-encoding. Re-encoding a PNG will likely invalidate the SEAL signature. However, this is supposed since an invalid signature explicitly denotes that the file has been altered (re-encoded) after signing.
 
@@ -70,7 +75,8 @@ The maximum JPEG APP block data size is 65,533 bytes. Data that is larger than o
 
 When the SEAL verifying system detects the signature offsets (range `S~s`), is should make sure the length of the signature matches the expected signature length. A signature range that differs from the expected length should immediately be rejected as a failed signature.
 
-**NOTE:** Some JPEG extensions do not follow the JPEG standard. Rather than using self-contained APP blocks, they may use pointers to absolute file positions located after the end of the file. These non-standard extensions include MPF and some MakerNotes. Adding in a signature will likely make the absolute pointer locations reference the wrong area. While it is desirable to fix these offsets if they are known, SEAL is *not* required to retain or correct non-standard JPEG extensions.
+### JPEG: The non-standard standard
+Some JPEG extensions do not follow the JPEG standard. Rather than using self-contained APP blocks, they may use pointers to absolute file positions located after the end of the file. These non-standard extensions include MPF and some MakerNotes. Adding a signature to the file will likely make the absolute pointer locations reference the wrong area. While it is desirable to fix these offsets if they are known, SEAL is *not* required to retain or correct non-standard JPEG extensions.
 
 ## GIF
 The GIF format only supports comments and are limited to 255 bytes per comment.
