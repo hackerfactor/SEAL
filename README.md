@@ -31,5 +31,8 @@ Today, if you send email, then you are very likely using both SPF and DKIM, even
 
 In my opinion, the anti-spam efforts got it right. SEAL applies DKIM to any file format (media), rather than being restricted to only email (as is the case with DKIM).
 
-For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how SEAL compares to other validation, authentication, and provenance solutions.
-
+## Specifications and Code
+- For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how SEAL compares to other validation, authentication, and provenance solutions.
+- A C/C++ implementation for Linux is available at [SEAL-C](https://github.com/hackerfactor/SEAL-C). Other platforms and languages are in development.
+- A free remote signer is online at [Sign My Data!](https://signmydata.com/). This works with the [SEAL-C](https://github.com/hackerfactor/SEAL-C) code.
+- Developers and inqueries are welcome on our [Discord Server](https://discord.gg/qWt4krtTPD).
