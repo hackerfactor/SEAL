@@ -1,0 +1,20 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.seal/2024/XMLSchema">
+  <xs:element name="seal" type="sealType"/>
+  <xs:complexType name="sealType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute type="xs:byte" name="seal"/>
+        <xs:attribute type="xs:byte" name="kv"/>
+        <xs:attribute type="xs:string" name="ka"/>
+        <xs:attribute type="xs:string" name="da"/>
+        <xs:attribute type="xs:string" name="sf"/>
+        <xs:attribute type="xs:string" name="info"/>
+        <xs:attribute type="xs:string" name="copyright"/>
+        <xs:attribute type="xs:int" name="id"/>
+        <xs:attribute type="xs:string" name="b"/>
+        <xs:attribute type="xs:string" name="d"/>
+        <xs:attribute type="xs:string" name="s"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:schema>
