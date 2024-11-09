@@ -31,7 +31,9 @@ XMP is a common metadata structure found in many different file formats. XMP dat
 - `<seal .../>`
 - `<\*:seal> ... </\*:seal>`, where '\*' denotes a namespace, such as `<seal:seal>` or `<xmp:seal>`.
 
-In each case, the parameters for the tag includes the pre-defined fields from the specification. (E.g., `<xmp:seal seal=1 b=F~S,s~f d=domain s=*signature* />` or `<xmp:seal>seal=1 b=F~S,s~f d=domain s=*signature*</xmp:seal>`)
+In each case, the parameters for the tag includes the pre-defined fields from the specification. (E.g., `<seal:seal seal=1 b=F~S,s~f d=domain s=*signature* />` or `<seal:seal>seal=1 b=F~S,s~f d=domain s=*signature*</seal:seal>`)
+
+The default namespace is `seal`. However, decoders should scan any `\*:seal` record.
 
 Some XMP records can contain nested media. (These are usually base64-encoded files.) The nested media may contain its own SEAL signatures. Those signatures are limited to the scope of the nested media. Generic validators that do not know about the specifics of the XMP processing are not required to evaluate XMP's nested media.
 
@@ -74,12 +76,45 @@ Some JPEG extensions do not follow the JPEG standard. Rather than using self-con
 (The current [sealtool](https://github.com/hackerfactor/SEAL-C) implementation fixes MPF offsets during signing.)
 
 ## GIF
-The GIF format only supports comments and are limited to 255 bytes per comment.
-- The SEAL signature MUST fit within a single comment block. (Elliptic curve signatures with base64 encoding are recommended since it's a smaller signature size than RSA with hex encoding.)
-- GIF's XMP with a SEAL record is not permitted. GIF's XMP support uses an ugly hack where long XMP records may be split between adjacent comment records. This introduces the risk of splitting the SEAL signature across multiple GIF chunks. Because of the ugly hack, it is possible to insert data into the file if the range `S~s` splits across adjacent GIF comments. For this reason, SEAL is not supported in GIF XMP records.
+The GIF format only supports comments and are limited to 255 bytes per comment. GIF also supports application blocks. Application blocks use one byte to denote the length. Longer application blocks are combined by a sequence of lengths, ending when the length is zero.
+
+For variable data fields (such as SEAL or XMP), there's a trick. The entire data gets placed in an application block. The GIF parser will read a text letter from the data as if it were a length, and it will continue parsing. At the end of the data is padding that ends with a null. For example:
+```
+00000300   55 44 44 44  22 22 22 11  11 11 00 00  00 21 FF 0B  UDDD"""......!..
+00000310   53 45 41 4C  5F 47 49 46  31 2E 30 3C  73 65 61 6C  SEAL_GIF1.0<seal
+00000320   20 73 65 61  6C 3D 22 31  22 20 6B 76  3D 22 31 22   seal="1" kv="1"
+00000330   20 6B 61 3D  22 65 63 22  20 64 61 3D  22 73 68 61   ka="ec" da="sha
+00000340   32 35 36 22  20 73 66 3D  22 62 61 73  65 36 34 22  256" sf="base64"
+00000350   20 69 6E 66  6F 3D 22 53  61 6D 70 6C  65 20 43 6F   info="Sample Co
+00000360   6D 6D 65 6E  74 22 20 63  6F 70 79 72  69 67 68 74  mment" copyright
+00000370   3D 22 53 61  6D 70 6C 65  20 43 6F 70  79 72 69 67  ="Sample Copyrig
+00000380   68 74 22 20  69 64 3D 22  39 34 36 32  37 30 31 22  ht" id="9462701"
+00000390   20 62 3D 22  46 7E 53 2C  73 7E 73 2B  33 2C 73 2B   b="F~S,s~s+3,s+
+000003A0   37 7E 66 22  20 64 3D 22  73 69 67 6E  6D 79 64 61  7~f" d="signmyda
+000003B0   74 61 2E 63  6F 6D 22 20  73 3D 22 4D  45 55 43 49  ta.com" s="MEUCI
+000003C0   46 38 4D 63  6A 38 6E 59  35 45 62 39  6E 66 6B 69  F8Mcj8nY5Eb9nfki
+000003D0   68 55 48 4E  62 6D 46 73  46 4C 7A 51  74 6B 73 51  hUHNbmFsFLzQtksQ
+000003E0   59 62 4D 77  51 63 44 4E  69 48 67 41  69 45 41 79  YbMwQcDNiHgAiEAy
+000003F0   67 76 62 74  71 79 70 38  4E 59 59 36  46 66 56 58  gvbtqyp8NYY6FfVX
+00000400   4B 69 6A 49  34 2B 78 6C  62 41 63 58  64 61 71 73  KijI4+xlbAcXdaqs
+00000410   63 6E 6A 30  67 78 4D 72  74 4D 3D 22  2F 3E 20 20  cnj0gxMrtM="/>
+00000420   20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20
+00000430   20 20 20 20  20 20 20 20  20 20 20 20  20 20 20 20
+00000440   20 20 20 20  20 20 20 20  20 00 2C 00  00 00 00 08           .,.....
+```
+- The application block begins at 0x30d (0x21 0xff). It is 11 bytes long (0x0b). The data starts with an application name.
+- The next application block length is at 0x31b and is 0x3c bytes long (the '<' character in the text data).
+- Then comes the block length at 0x358 (that's 0x31b + 0x3c + 1) with a length of 0x61 ('a').
+- Then comes the block length at 0x3ba with the length 0x22 (double quote).
+- Then comes the block length at 0x3dd with the length 0x6b ('k').
+- The final offset is 0x449 with a length of zero. Since the actual data ended early, the extra space is padding.
+
+If the padding is unknown when writing the field, then it can be filled with a slope: 0x7f 0x7e 0x7d ... 0x02 0x01 0x00. This way, wherever the previous character lands, it will be directed to the 0x00 length. (XMP uses this trick to store large XMP records in GIF images.)
+
+The GIF file format does not permit appending.
 
 ## PPM and PGM
-Portable pixel maps contain a simple header and then the raster map of data.
+Portable pixel maps (PPM) and portable gray maps (PGM) contain a simple header and then the raster map of data.
 - The first line defines the type of data.
 - The second line defines the image dimensions.
 - The third line identifies the number of colors.
@@ -91,6 +126,8 @@ The SEAL record can be stored in a single comment line. For example:
 # <seal ... s=.../>
 ```
 
+The PPM and PGM formats do not support appending data.
+
 ## PDF
 The PDF format stores data in objects. Objects may contain page information, structural information, comments, and more. Objects can also be unlinked.
 - All PDF files begin with two comments, denoted by an initial "%PDF". The first line identifies the PDF version and the second line is a binary sequence (an unused BOM).
@@ -101,9 +138,9 @@ PDFs are parse backwards, starting from the end of the file:
 2. Before the "%%EOF" is either a `startxref` or `trailer` record that points backwards into the file using an absolute offset.
 3. Within the PDF are one or more cross-reference tables (`xref`). These may be plain text or encoded. The `xref` tables identifies the absolute position of each object.
 
-Inserting a SEAL record before any object in the file effectively means every `xref`, `trailer`, and `startxref` may need to be updated. And when you add in compressed xref tables, then a single change could result in a different length and even more offset updating. This becomes a nightmare. For this purpose, inserting a SEAL record into any existing PDF must be done after the last object.
+Inserting a SEAL record before any object in the file effectively means every `xref` table, `trailer`, and `startxref` may need to be updated. And when you add in compressed xref tables, then a single change could result in a different length and even more offset updating. (This becomes a nightmare.) For this purpose, inserting a SEAL record into any existing PDF must be done after the last object.
 
-PDF permits comments located between objects. A comment consists of the "%" character and continues to the end of the line. (Technically, the initial "%PDF" and final "%%EOF" are comments.) Comments are ignored when parsing. A SEAL record can be written into any comment in the file. E.g.:
+PDF permits comments located between objects. A comment consists of the "%" character and continues to the end of the line. Technically, the initial "%PDF" and final "%%EOF" are mandatory comments. All other comments are optional. Comments are ignored when parsing. A SEAL record can be written into any optional comment in the file. E.g.:
 `\%\%<seal seal=1 da=sha1 ka=rsa d="signmydata.com" s="*signature*"/>`
 
 The SEAL record MUST NOT be encrypted or compressed. (Otherwise it cannot be validated without the password, and that defeats the purpose of validating files.)
@@ -113,11 +150,17 @@ PDF files are a very complicated structure that requires care when inserting dat
 - A PDF object may contain nested media, just as an included JPEG, PNG, video, or audio file. Any SEAL record inside the nested media is limited in scope to the nested media.
 - Some PDF encoders separate nested media's EXIF and XMP data from the stored media file. In effect, the PDF contains one object with EXIF data, one object with XMP data, and another object with the image information referenced by the EXIF and XMP data. Because encoders can separate parts from the nested media components, the SEAL record MUST NOT be stored in any PDF EXIF or XMP object.
 
+Most PDF editors rewrite the entire file when saving. This may remove any SEAL comment. (That's fine, since the file has been changed and the previous signature would be invalid.)
+
+A few PDF editors properly append to the file. They replace the final "%%EOF" with the new data, and include a new pointer that references the previous pointer. In this case, the PDF can support appending SEAL records.
+
 ## ISO-14496 / ISO-BMFF (MP4, 3GP, HEIC/HEIF, etc.)
 ISO-14496 defines a base media file format (ISO-BMFF). This file format is used by a variety of media types, including MP4, 3GP, HEIC/HEIF, and AVIF. The file's structure contains a series of atoms. Each atom contains:
 - 4-byte data length
 - 4-byte atom type (typically four text characters)
 - data
+
+(There's a special case where, if the length is "1", then the atom type is followed by a 64-bit length. This is in case there is a really large data chunk.)
 
 Each atom is fully self-contained; data is not split between atoms.
 
@@ -133,8 +176,8 @@ This is not an exhaustive list of atoms that support nesting.
 
 ISO-BMFF does not have a native comment atom. Instead, SEAL records should be stored in one of these areas:
 - A top-level `Exif` atom. EXIF data is typically stored in an `Exif` atom. For HEIC, this usually appears under the nested tree: `meta:iinf:infe:Exif`, which is ambiguous since it may be linked to a track or subimage; it does not necessarily represent the entire file.
-- A top-level XMP atom. (`mime` is used by HEIC/AVIF for storing XMP data. `xml ` is defined for the JPEG-XL format, and `XMP\_` is used for police videos.) For HEIC, this usually appears nested under `meta:iinf:infe:mime`, but again, are ambiguous in scope.
-- Unknown atoms are ignored by ISO-BMFF processors. The custom atom `seal` stores the SEAL record.
+- A top-level XMP atom. (`mime` is used by HEIC/AVIF for storing XMP data. "`xml `" -- four characers including the space -- is defined for the JPEG-XL format, and `XMP\_` is used for police videos.) For HEIC, this usually appears nested under `meta:iinf:infe:mime`, but again, are the scope is ambiguous due to the nesting.
+- The custom atom `seal`. Unknown atoms are ignored by ISO-BMFF processors. This is the preferred storage method.
 
 ## RIFF
 The Resource Interchange File Format (RIFF) is used by webp, avi, and wav. The format uses chunks and is similar to PNG (without the checksum).
@@ -152,9 +195,9 @@ Following the header are the data chunks. Each chunk contains:
 Only the `LIST` chunk type contains nested chunks.
 
 The SEAL record must appear in a top-level chunk. It can be stored in any of the following locations:
+- `SEAL` chunk: The data is the SEAL record: `<seal ... />`
 - `EXIF` chunk: This data contains an EXIF record. The SEAL record may be stored as an EXIF SEAL record (0xcea1).
 - `XMP ` (with space) chunk: This data contains an XMP record that may contain a SEAL entry.
-- `SEAL` chunk: The data is the SEAL record: `<seal ... />`
 
 ## Matroska
 Matroska is the format used by webm, mka, mkv, and other audio and visual formats.
