@@ -9,7 +9,7 @@ This document provides the technical implementation details, including the high-
 1.1.3 (2024-09-07) Renamed from VIDA to SEAL.
 
 ## Solution Intent
-SEAL allows a user to cryptographically sign a file. The cryptographic implementation prevents forged signatures, false attribution, and false signing denials (nonrepudiation).
+SEAL allows a user to cryptographically sign a file. The cryptographic implementation prevents forged signatures, false attribution, and false signing denials (non-repudiation).
 
 What is the intent behind signing a file?
 - SEAL doesn't attribute copyright or ownership. A malicious user can easily remove the signature and add in their own signature, claiming ownership. (Copyright or authorship can be declared in an existing EXIF, IPTC, or XMP metadata field.)
@@ -45,7 +45,7 @@ DKIM provides:
 - **Authentication**: The email states who sent it and the cryptographic key validates the sender (either the sending system or sending user). This prevents someone from forging an email as the sender.
 - **Provenance**: The email header identifies the email's origination system.
 - **Tamper Detection**: The cryptographic signature prevents unauthorized changes to the signed email. While someone could remove the DKIM header, the authentication requirement prevents someone from forging the header as the user defined in the provenance.
-- **Nonrepudiation**: Only the sender has access to the private key used for signing the email. A valid signature must come from the sender.
+- **Non-repudiation**: Only the sender has access to the private key used for signing the email. A valid signature must come from the sender.
 
 SEAL extends the time-tested and proven DKIM approach to any file format, including pictures, audio files, videos, and documents.
 
@@ -171,7 +171,7 @@ The fields are as follows:
 - `d=domain`: The domain name containing the DNS TXT record for the SEAL public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
-- `copy="text"`: (Optional) Copyright information. Copyright information is typically stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the SEAL record.
+- `copyright="text"`: (Optional) Copyright information. Copyright information is typically stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the SEAL record.
 - `info="text"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the SEAL record.
 - `sf=base64` (Optional) The **s**ignature **f**ormat. Possible values:
   - "hex": The signature is stored as a two-byte hexadecimal notation using lowercase letters [0-9a-f]. Optional padding can use spaces (character 0x20) after the hexadecimal value.
@@ -289,13 +289,13 @@ For offline use, the DNS record may be copied locally and used in place of an ac
 The SEAL metadata record can be stored in any of the following areas:
 - **XMP**: SEAL can be stored in an XMP "<seal>value</seal>" where value includes all SEAL parameters and the signature. This is ideal for any file format that already supports XMP. For example, a full SEAL record in XMP may look like:
 ```
-<seal seal="1" ka="rsa" da="sha256" d="seal.hackerfactor.com" c="This is a comment" copy="Copyright 2024 (C) Hacker Factor" b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
+<seal seal="1" ka="rsa" da="sha256" d="seal.hackerfactor.com" c="This is a comment" copyright="Copyright 2024 (C) Hacker Factor" b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
 ```
 or
 ```
 <seal>seal="1" ka="rsa" da="sha256"
 d="seal.hackerfactor.com"
-c="This is a comment" copy="Copyright 2024 (C) Hacker Factor"
+c="This is a comment" copyright="Copyright 2024 (C) Hacker Factor"
 b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="
 </seal>
 ```
@@ -325,11 +325,26 @@ Signing applications MUST scan the media for prior signatures.
 - To retain integrity, appended segments MUST overlap signatures (e.g., `b=P~S`) rather than only signing the appended data (e.g., `b=p~S`). The overlap prevents a malicious user from replacing a signed data segment without detection. Non-overlapping signatures (e.g., `b=p~S`) SHOULD only be used when each appended segment is independent (e.g., hard drive sectors).
 
 ### File-specific Formats
-For file formats that may not contain XMP records, the SEAL information may also be stored in SEAL-specific data blocks:
+The SEAL record always contains the wrapper "<seal seal=*version* ... />". This can appear in XMP, EXIF, or format-specific locations:
+
+- **EXIF**: The tag 0xcea1 should store the SEAL record.
+- **XMP**: The namespace should be "seal". The record can be stored as an independent tag or as an attribute:
+    <seal:seal>&lt;seal ... &gt;</seal:seal>
+    <seal:seal seal='&lt;seal ... &gt;'/>
+    <rdf... seal:seal='&lt;seal ... &gt;'>
+
+Other variations, such as looking for non-standard alternate namespaces (`<xmp:seal>`) or EXIF comments, should be supported by the decoder but treated as deprecated encodings.
+
+Both EXIF and XMP are only permitted if the record can be stored as a single block. With some formats, such as JPEG, long EXIF or XMP records may be split between multiple blocks. The splitting can end up altering the signature after computing it. Moreover, if the signature (`s=`) is split between multiple blocks, then it permits insertion attacks. The entire SEAL record MUST be located in the first block. If this is not possible, then the EXIF/XMP record MUST NOT be used to store the SEAL record.
+
+Many file formats support both global and local metadata. For example, MP4 movies often have multiple tracks (one for audio, one for video, one for subtitles, etc.). Each track can have their own metadata. Because SEAL records cover the entire file, they MUST only be stored in global fields.
+
+Format-specific blocks include:
 - **JPEG**: A custom JPEG application record can be used to store the SEAL record. It should be an APP8 or APP9 block with the label `SEAL`. (JPEG assumes that adjacent APP blocks with the same numeric identifier are continuations of the previous data. If the previous JPEG block is APP8, then SEAL should use APP9. Otherwise, it should use APP8.)
-- **PNG**: A custom PNG chunk can be used to store the SEAL record. PNG chunks use capitalization to determine whether a chunk is required or safe-for-copy. Encoders SHOULD use `sEAl`, where the capitalization indicates: not mandatory, public, and safe-to-copy. However, for verifying, any acceptable variation of the capitalization should be considered (SEAL, SEAl, seAl, etc.). PNG may also store the signature in a text or Exif chunk (e.g., teXt, itXt, eXIf).
+- **PNG**: A custom PNG chunk can be used to store the SEAL record. PNG chunks use capitalization to determine whether a chunk is required or safe-for-copy. Encoders SHOULD use `seAl`, where the capitalization indicates: not mandatory, public, and safe-to-copy. However, for verifying, any acceptable variation of the capitalization should be considered (SEAL, SEAl, seAl, etc.). PNG may also store the signature in a text or Exif chunk (e.g., teXt, itXt, eXIf). Any SEAL record that isn't in a PNG `seAl` chunk should be treated as non-standard.
 - **ISOBMFF** (HEIC, AVIF, MP4, 3GP, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
 - **RIFF** (WebP, AVI, WAV, etc.): A custom atomic block can be used to store the SEAL record. The atom should use `SEAL`.
+- **Matroska** (WebM, WKM, WKA, etc.): This format does not have a standard definition for storing EXIF or XMP data. A custom identifier 0x05345414C (SEAL, encoded as 0x085345414C) should store the SEAL chunk.
 
 A file may contain multiple signatures. The specified byte ranges (`b=`) should not overlap subsequent SEAL records. If a file is altered and a new SEAL record is added without removing an older one, then there are two options:
 - If the first chunk uses the full file range, such as `b=~S,s~`, then the older SEAL signature should fail to validate but the second SEAL record will validate. This denotes that the subsequent signer takes responsibility (attestation) for the previous content. The signer should not sign the file if the previous SEAL record was invalid.
