@@ -6,9 +6,9 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
-1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
-1.1.4 (2024-10-05) More details about formats and rewording the appending rules for overlap protection.
-1.1.3 (2024-09-07) Renamed from VIDA to SEAL.
+- 1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
+- 1.1.4 (2024-10-05) More details about formats and rewording the appending rules for overlap protection.
+- 1.1.3 (2024-09-07) Renamed from VIDA to SEAL.
 
 ## Solution Intent
 SEAL allows a user to cryptographically sign a file. The cryptographic implementation prevents forged signatures, false attribution, and false signing denials (non-repudiation).
