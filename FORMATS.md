@@ -31,7 +31,7 @@ EXIF has both well-defined tags and non-standard tags. Since EXIF does not have 
 
 ## XML, SVG, and HTML
 XML formats, including SVG and HTML, support [document definitions](https://www.w3.org/TR/xml/#sec-prolog-dtd). These are tags that begin with `<!`. Definition tags are global in scope and define properties about the document. By definition, unknown properties can be ignored by the document parser; adding a SEAL record to an XML document will not alter the schema or corrupt the file format. A sample HTML document with a SEAL record may look like:
-```
+```html
 <!DOCTYPE html>
 <!SEAL seal="1" ... s="abcd1234"/>
 <html lang="en">
@@ -230,11 +230,6 @@ Matroska typically stores metadata before streams. Although the SEAL record (0x0
 Archive formats, including ZIP, RAR, and TAR support a comment field that spans the entire archive. This may include the SEAL record (`<seal ... />`). This includes open document formats like docx, pptx, and xlsx.
 
 The SEAL signature should span the entire archive. Individual files within the archive may have their own signatures that only span the scope of each individual file.
-
-## XML, HTML, SVG
-XML-based formats, including HTML and SVG, can include a SEAL tag. The tag must be self-closing (i.e., beginning with `<seal` and ending with `/>`).
-
-NOTE: OpenDocument files use a zip archive with XML-based contents (files in the zip archive). A SEAL record inside any of the XML-based contents only covers that single file and not the entire zip archive.
 
 ## Email
 SEAL does not support email because the headers and attachments may be re-ordered. Use DKIM instead.
