@@ -31,7 +31,7 @@ EXIF has both well-defined tags and non-standard tags. Since EXIF does not have 
 
 ## XML, SVG, and HTML
 XML formats, including SVG and HTML, support [document definitions](https://www.w3.org/TR/xml/#sec-prolog-dtd). These are tags that begin with `<!`. Definition tags are global in scope and define properties about the document. By definition, unknown properties can be ignored by the document parser; adding a SEAL record to an XML document will not alter the schema or corrupt the file format. A sample HTML document with a SEAL record may look like:
-```
+```html
 <!DOCTYPE html>
 <!SEAL seal="1" ... s="abcd1234"/>
 <html lang="en">
