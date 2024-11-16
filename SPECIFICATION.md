@@ -6,6 +6,8 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
+1.1.4 (2024-10-05) More details about formats and rewording the appending rules for overlap protection.
 1.1.3 (2024-09-07) Renamed from VIDA to SEAL.
 
 ## Solution Intent
@@ -286,26 +288,13 @@ All verification is performed locally. There is no need to consult any external 
 For offline use, the DNS record may be copied locally and used in place of an active DNS lookup. However, this usage may not notice if there is a revocation posted to DNS at a later time.
 
 ## Metadata Signature Storage Area
-The SEAL metadata record can be stored in any of the following areas:
-- **XMP**: SEAL can be stored in an XMP "<seal>value</seal>" where value includes all SEAL parameters and the signature. This is ideal for any file format that already supports XMP. For example, a full SEAL record in XMP may look like:
-```
-<seal seal="1" ka="rsa" da="sha256" d="seal.hackerfactor.com" c="This is a comment" copyright="Copyright 2024 (C) Hacker Factor" b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="/>
-```
-or
-```
-<seal>seal="1" ka="rsa" da="sha256"
-d="seal.hackerfactor.com"
-c="This is a comment" copyright="Copyright 2024 (C) Hacker Factor"
-b="~S,s~" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q=="
-</seal>
-```
-This latter format may use quotes or HTML-entities, such as `&quot;`.
+The SEAL metadata record may be stored in format-specific data blocks, or generic XML-like data records. Although the nomenclature may be format-specific, the basic requirements remain the same:
+- The SEAL signature must be stored in a valid data section (block, chunk, atom, header, etc.).
+- The SEAL record must not be split between data sections; it must be fully contained within one data section. If there are multiple data sections, then the SEAL record must be in the first data section.
+- Some data sections permit nesting other media files that may contain their own SEAL records. The scope of the SEAL record (the range `F~f`) is limited to the self-contained file. A nested image's range only covers the nested image.
+- The SEAL record applies to the entire file and must be stored in a data section with an unambiguous scope. For example, videos often have multiple tracks for audio, video, subtitles, etc. Each track may have their own metadata. If the SEAL record is in a track, then it is ambiguous as to whether it applies to the track or the entire file. Whereas if it's at the top-level structure, then it clearly applies to the entire file.
 
-A minimal XMP example omits fields, relying on the default values, such as:
-```
-<seal d="seal.hackerfactor.com" ka="rsa" s="E6JF8hgyFknuIIiF9ijlU+aI95Kw7q3oN4K8jX+qsiMgHDTTMt7LDFY4/UfuLWrneAzFD3feMaszxRPCaNKCQAsX+1vZmvXAgmyVJEYk+GDtld+YLLkTdiC6WV1eBG0buid5QN+GsD8SJ8rF1uiIGZClLJ/SCQbmLTCQEEhHDUjGb9rGrWtGnIEATBhUe93A468UBybpnEFf7LHGLIQcvgZxMg7UcS9IFo/EIEC3QoefXEB2XXZ7N5IEXhKHhkYSzNMLOvFe63Iqp5aRHLgUDSOZP+i6bQnNhPeEvqgRR4oC73pewpOP1BDndn2ZVR9nmWNCH3cvvgM2wXpeITiI8Q"/>
-```
-NOTE: The minimal example doesn't have the same SEAL fields as the full example, so the bytes covered by the range are different, resulting in a different signature.
+For format specific information, see the [Formats](/FORMATS.md) documentation.
 
 ### Appending vs Finalized
 The `b=` range for determining the digest permits specifying the start and end of the file (`F`...`f`) or previous signature (`P`...`p`). This is because some file formats permit appending data, such as validating a video or audio stream.

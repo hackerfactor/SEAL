@@ -8,12 +8,15 @@ Many common data formats divide the structures into sections.
 - BMFF (MP4, MOV, HEIC, HEIF, etc.) calls these sections 'atoms'.
 - Some file formats, like PPM and ZIP, only have headers and data.
 - PDF uses PDF comments.
+- XML (XML, SVG, HTML) support document declarations.
 
 Although the nomenclature is format-specific, the basic concept is the same:
 - The SEAL signature must be stored in a valid data section (block, chunk, atom, header, etc.).
 - The SEAL record must not be split between data sections; it must be fully contained within one data section. If there are multiple data sections, then the SEAL record must be in the first data section.
 - Some data sections permit nesting other media files that may contain their own SEAL records. The scope of the SEAL record (the range `F~f`) is limited to the self-contained file. A nested image's range only covers the nested image.
-- The SEAL record applies to the entire file and must be stored in a data section with an unambiguous scope. (E.g., Videos often have multiple tracks for audio, video, subtitles, etc. Each track may have their own metadata. If the SEAL record is in a track, then it is ambiguous as to whether it applies to the track or the entire file. Whereas if it's at the top-level structure, then it clearly applies to the entire file.)
+- The SEAL record applies to the entire file and must be stored in a data section with an unambiguous scope. For example:
+  - Videos often have multiple tracks for audio, video, subtitles, etc. Each track may have their own metadata. If the SEAL record is in a track, then it is ambiguous as to whether it applies to the track or the entire file. Whereas if it's at the top-level structure, then it clearly applies to the entire file.
+  - PDF may have objects containing metadata. The scope of a PDF object is dependent on the parent object that links to it. The SEAL record must be stored in a location that has global scope.
 
 Processing SEAL records requires parsing the high-level file format. However, it MUST NOT require parsing nested data blocks or having a detailed understanding of the containing structure. For example:
 - Many of these storage areas support scanning the data section's range for a SEAL record using a regular expression: `@<seal seal=[0-9]+[^>]\* s=[^>]+/>@`
@@ -25,6 +28,21 @@ EXIF is a common metadata structure found in many different file formats. It use
 - Tag 0xfffe defines a generic comment.
 
 EXIF has both well-defined tags and non-standard tags. Since EXIF does not have a specific numeric code for SEAL records, we will use the non-standard tag 0xcea1. (The tag looks like it spells "ceal" or "seal".) This tag may conflict with other non-standard tags. However, the value of the tag MUST be a SEAL record (`<seal .../>`) and should avoid any ambiguity.
+
+## XML, SVG, and HTML
+XML formats, including SVG and HTML, support [document definitions](https://www.w3.org/TR/xml/#sec-prolog-dtd). These are tags that begin with `<!`. Definition tags are global in scope and define properties about the document. By definition, unknown properties can be ignored by the document parser; adding a SEAL record to an XML document will not alter the schema or corrupt the file format. A sample HTML document with a SEAL record may look like:
+```
+<!DOCTYPE html>
+<!SEAL seal="1" ... s="abcd1234"/>
+<html lang="en">
+ <head><meta charset="utf-8"><title>my website</title></head>
+ <body><h1>This is a website</h1></body>
+</html>
+```
+- Per XML specifications, tag name is case-insensitive. (`<!SEAL` or `<!seal` are acceptable.)
+- Self-closing tag is optional. It can end with `/>` or `>`.
+
+Although document declarations may appear anywhere in the document, they SHOULD appear before the root tag (`<html>`, `<svg>`, etc.).
 
 ## XMP
 XMP is a common metadata structure found in many different file formats. XMP data uses an XML file format structure. SEAL supports two types of XMP records:
