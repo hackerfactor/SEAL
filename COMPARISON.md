@@ -26,7 +26,7 @@ The IPTC metadata also defines a [digital source type](https://cv.iptc.org/newsc
 The IPTC labeling is vulnerable to alterations and false attribution. However, it does not add any addition _trust_ requirements and the content can often be readily validated by a forensic examiner.
 
 ## Solution #3: Blockchain
-There are a variety of companies who have proposed blockchain-based solutions. The basic concept is to sign the media and associated the signature and provenance metadata with a blockchain entry.
+There are a variety of companies who have proposed blockchain-based solutions. The basic concept is to sign the media and associate the signature and provenance metadata with a blockchain entry.
 
 Unfortunately, they all suffer from the same fundamental limitations:
 - **Scale**: On any given day, Facebook, Instagram, Google, and other large providers handle millions of photos, videos, documents, and other kinds of media. If every file was digitally signed, then there is no blockchain solution that could handle the volume of signatures. Most blockchain solutions restrict their scope to their own registered customers. But that openly assumes that their solution will never be widely adopted.
