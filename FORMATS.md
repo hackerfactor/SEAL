@@ -253,6 +253,30 @@ The SEAL record must be stored as a top-level element (not nested):
 - The data type must be `ST` (short text, not more than 1024 characters) or `LT` (long text). 
 - The data contains the SEAL record `<seal ... />`.
 
+## XML, HTML, and SVG
+The SGML family of text formatting includes XML (data), HTML (web page text), and SVG (vector graphics).
+
+Typical tags are in the format `<tag optional attributes>...</tag>`. Tags can also be self-closing, such as `<tag ... />`. All tags must begin with a letter, underscore, or colon, and can be additional letters, numbers, colons, periods, or hyphens. The tag's name ends when it reaches a space or `>` character.
+
+All proper SGML files begin with a root tag that includes all other document tags, such as `<html> ... </html>` or `<svg> ... </svg>`.
+
+There are also two types of special tags that can appear anywhere in the document, including outside the scope of the root tag. These are:
+- Definitions. These use the format `<! ... >`. These instructions are well-defined as part of the SGML/XML standard. They include `<!-- ... -->` for comments and `<!DOCTYPE ... >` for defining the document type.
+- Processing instructions. These use the format `<?type ... ?>`. If the type is known by the pre-processor (e.g., <?php ... ?>`), then the pre-processor may interpret the code. Unprocessed instructions are ignored and treated as comments by the renderer (e.g., your web browser).
+
+The SEAL record(s) MUST be evaluated after any other definitions and non-SEAL processing instructions have been applied. The intent is for the end-user to validate the file, and not any intermediary data processor.
+
+SEAL records are stored in a `<?seal ... ?>` processing instruction. If the rendering system understands the SEAL signature tag, it can validate the XML, HTML, or SVG signature.
+- The SEAL tags can appear anywhere in the file, but are global in scope. Ideally, the first SEAL record should appear before the root tag and after any initial definitions or processing instructions. When appending, the SEAL records should appear after the appended data.
+- The SEAL record covers the raw document. Changes to spacing, newline encodings, and tag capitalizations results in an invalid signature. This intentional lack of canonicalization prevents the document from undergoing subtle alterations that could impact the content. (E.g., Switching between CRLF, LF, and extra spaces to encode a steganographic message will result in a change to the signature.)
+
+The insertion process should try to identify and retain the newline character (DOS "CRLF" or unix "LF").
+
+## Plain Text
+Plain text in UTF-8 encoding can be signed by appending a SEAL record to the file.  The insertion process should try to identify and retain the newline character (DOS "CRLF" or unix "LF").
+
+Unlike other format support, plain text cannot have hidden signatures. The user viewing the file *will* see the raw SEAL record.
+
 ## Unknown file formats
 Unknown text file formats may include a SEAL record. The record must match the SEAL regular expression: `@<seal seal=[0-9]+[^>]* s=[^>]+/>@`
 
