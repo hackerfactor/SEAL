@@ -35,4 +35,5 @@ In my opinion, the anti-spam efforts got it right. SEAL applies DKIM to any file
 - For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how SEAL compares to other validation, authentication, and provenance solutions.
 - A C/C++ implementation for Linux is available at [SEAL-C](https://github.com/hackerfactor/SEAL-C). Other platforms and languages are in development.
 - A free remote signer is online at [Sign My Data!](https://signmydata.com/). This works with the [SEAL-C](https://github.com/hackerfactor/SEAL-C) code.
+- A compiled [Windows port](https://github.com/named-dodo/SEAL-WinDemo) of `sealtool` (SEAL-C).
 - Developers and inqueries are welcome on our [Discord Server](https://discord.gg/qWt4krtTPD).
