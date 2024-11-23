@@ -272,6 +272,27 @@ SEAL records are stored in a `<?seal ... ?>` processing instruction. If the rend
 
 The insertion process should try to identify and retain the newline character (DOS "CRLF" or unix "LF").
 
+## TIFF
+The Tagged Image File Format (TIFF) is commonly used for storing images, including FAX files, Digital Negatives (DNG), camera raw formats from Canon (CRW and CR2), Hasselblad (3FR), Kodan (KDC), Leica (RAW), Nikon (NEF), Panasonic Raw, Sony (ARW), and many more.
+
+The TIFF format includes one or more image file directories (IFD) records that are linked together. The TIFF header specifies:
+- The byte order (endian) for the file. Any SEAL reader/writer MUST support by big endian and little endian.
+- An arbitrary number. Most TIFF formats use "42" (0x2a). However, raw files from Leica and Panasonic use "85" (0x55).
+- An offset to the first IFD. (Called IFD0.)
+
+Each IFD contains:
+- The number of entries.
+- Each entry includes the tag type, tag encoding format, offset to the tag's data, and size of the data. If the size is less than 5 bytes, then the offset stores the tag's data.
+- After the entries is a pointer to the next IFD record. If there are no more records, then the value is zero.
+
+SEAL abides by the [TIFF standard](https://download.osgeo.org/libtiff/doc/TIFF6.pdf):
+- Private tags numbered 32768 or higher (0x8000). SEAL uses the private tag number 0xcea1.
+- TIFF readers must ignore any unknown private fields.
+- An IFD block only needs image information if it records an image. Some TIFF formats store metadata in an IFD without recognizable image information. (CR2 is a good example of this.) In this case, the TIFF parser should not try to extract an image from the non-image IFD.
+- When adding in (appending) a SEAL record, the last "next IFD" pointer is updated to reference the new IFD that contains the SEAL record. Writers must ensure that updating the previous "next IFD" value does not invalidate any previously-valid SEAL records.
+
+Some programs, like ImageMagick, warn about unknown private tags or IFD entries that do not describe images. However, this is not a problem with the TIFF file; ImageMagick does not adhere to the TIFF standard. (ImageMagick generates similar warnings if you rename a ".CR2" file to ".TIFF".)
+
 ## Plain Text
 Plain text in UTF-8 encoding can be signed by appending a SEAL record to the file.  The insertion process should try to identify and retain the newline character (DOS "CRLF" or unix "LF").
 
