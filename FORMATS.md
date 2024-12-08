@@ -249,9 +249,12 @@ The DICOM file format uses a nested set of groups, lists, and arrays, along with
 - Because of the plethora of vendor-specific tags, DICOM decoders are permitted to skip any unknown tag.
 
 The SEAL record must be stored as a top-level element (not nested):
-- The group must be 0x7661 (private attribute using the letters `va`).
-- The data type must be `ST` (short text, not more than 1024 characters) or `LT` (long text). 
+- The group must be 0xcea1 (odd number attributes are for private data elements)
+- Tag (cea1,0010) MUST contain "SEAL". This reserves the block (cea1,10*xx*) for SEAL. This only needs to be defined once per DICOM file.
+- Tag (cea1,1001) MUST contain the SEAL record. This record may be defined multiple times.
+- The data type for (cea1,1001) must be `ST` (short text, not more than 1024 characters), `LT` (long text, not more than 10240 characters), or `UT` (up to 0xfffffffe characters). Ideally, the encoder should use the shorted available format.
 - The data contains the SEAL record `<seal ... />`.
+- The data must be padded to the 16-bit boundary.
 
 ## XML, HTML, and SVG
 The SGML family of text formatting includes XML (data), HTML (web page text), and SVG (vector graphics).
