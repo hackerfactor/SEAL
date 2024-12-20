@@ -1,5 +1,5 @@
 # Secure Evidence Attribution Label (SEAL)
-Version 1.01, 4-Nov-2024
+Version 1.01, 20-Dec-2024
 
 SEAL is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats. It provides:
 - **Attribution**: The signature is attributed to a user or domain name.
@@ -33,7 +33,8 @@ In my opinion, the anti-spam efforts got it right. SEAL applies DKIM to any file
 
 ## Specifications and Code
 - For the solution details, see the [SPECIFICATION](/SPECIFICATION.md) document. The [COMPARISON](/COMPARISON.md) document shows how SEAL compares to other validation, authentication, and provenance solutions.
-- A C/C++ implementation for Linux is available at [SEAL-C](https://github.com/hackerfactor/SEAL-C). Other platforms and languages are in development.
-- A free remote signer is online at [Sign My Data!](https://signmydata.com/). This works with the [SEAL-C](https://github.com/hackerfactor/SEAL-C) code.
+- A C/C++ implementation for Linux is available at [SEAL-C](https://github.com/hackerfactor/SEAL-C).
 - A compiled [Windows port](https://github.com/named-dodo/SEAL-WinDemo) of `sealtool` (SEAL-C).
+- A TypeScript (node.js) implementation is available at [SEAL-js](https://github.com/bgon/SEAL-js).
+- A free remote signer is online at [Sign My Data!](https://signmydata.com/). This works with the [SEAL-C](https://github.com/hackerfactor/SEAL-C) code.
 - Developers and inqueries are welcome on our [Discord Server](https://discord.gg/qWt4krtTPD).
