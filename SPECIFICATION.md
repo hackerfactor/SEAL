@@ -1,5 +1,5 @@
 # SEAL Specification
-Version 1.1.4, 5-October-2024
+Version 1.2.0, 9-February-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
