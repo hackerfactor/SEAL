@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.0, 9-February-2025
+Version 1.2.1, 12-February-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.1 (2025-02-12) Adding derived source references.
 - 1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
 - 1.1.4 (2024-10-05) More details about formats and rewording the appending rules for overlap protection.
 - 1.1.3 (2024-09-07) Renamed from VIDA to SEAL.
@@ -195,29 +196,29 @@ A sample SEAL signature may look like:
 ```
 seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
 ```
+## Referencing Source Media
+A signed file is may not be the source media file. It may be derivation that has been re-encoded, resized, cropped, or have other alterations. For example, many web sites and content delivery services automatically re-encode media for users to download. Examples of common transformations include:
+- Converting between file formats, such as PNG, JPEG, and WebP. Similarly, video hosting sites often transcode the video based on the recipient's supported format. As an example, if the file is in a DIVX format but the client only supports MP4, then servers will typically re-encode the file to MP4 before sending it to the client.
+- Rescaling, cropping, or rotating the media. For example, if the image is 4000x3000 but the user's mobile device only supports 800x600, then transferring the full size results is a slower download rate and requires more resources from the client's device to store and scale the media. Instead, the server may scale the image smaller first, resulting in faster download speeds, faster client performance, and a better user experience.
+- Some metadata, such as EXIF and XMP, are informative but provide no rendering instructions. This can translate into wasted bandwidth since the client typically ignores the data. Many media hosting sites automatically remove optional metadata in order to reduce bandwidth requirements.
 
-### Derivation Notation
-Many web sites and content delivery services automatically re-encode media for users to download. Examples of these transformations include:
-  - Converting between file formats, such as PNG, JPEG, and WebP. Similarly, video hosting sites often transcode the video based on the recipient's supported format. (If the file is in a DIVX format but the client only supports MP4, then the server will typically re-encode the file before sending it to the client.)
-  - Rescaling, cropping, or rotating the media. For example, if the image is 4000x3000 but the user's mobile device only supports 800x600, then transferring the full size results is a slower download rate and requires more resources from the client's device to store and scale the media. Instead, the server may scale the image smaller first, resulting in faster download speeds, faster client performance, and a better user experience.
-  - Some metadata, such as EXIF and XMP, are informative but provide no rendering instructions. This can translate into wasted bandwidth since the client typically ignores the data. Many media hosting sites automatically remove informative metadata in order to reduce bandwidth requirements.
+If a file is transformed before downloading, then any existing SEAL signature becomes invalid. This is because transformations require altering the file after being signed. To address this problem, the SEAL signature may include the following fields that reference the source media:
 
-When a file is transformed before download, any existing SEAL signature becomes invalid. This is because the file was altered after being signed. To address this problem, the SEAL signature may include the following fields:
-- `src=url`: The URL specifies the location of the unaltered (pre-transformation) source media. The source media may be SEAL-signed, an unsigned source, or a file with some other signature technology. There is no requirement for the URL to point to the same type of media. For example:
-  - A news outlet may use `src` to reference the source media from a stock photo service.
-  - Video sites like YouTube may use `src` to identify the hosting web page that contains the video.
-- `srcx=hash`: If a `src` is provided, then an optional hashed value of the source may also be provided. This permits the SEAL verifier to confirm that the referenced media has not changed since signing.
-- `srca=alg`: For `srcx`, this specifies the hashing (sha256, sha512, etc.) and encoding algorithm (base64 or hex). When not specified, the default algorithm is `sha256+base64`.
+- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) source media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
+- `srcd=digest`: (Optional) The **d**igest of the **s**ou**rc**e file. This permits confirming the source file's contents.
+- `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file. Default is sha256 encoded with base64 encoding. When used, `srcd` MUST be present.
 
-A sample SEAL signature with derivation notation may look like:
+A sample SEAL signature with source reference may look like:
 ```
-seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" srcx="sha256+hex" srca="7d37530efc241eb3f19d202ebed76e284297427a2f5138e49f4d0c302d109381" src="https://signmydata.com/?logo=seal-fingerprint.jpeg" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
+seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" srca="sha256:hex" srcd="7d37530efc241eb3f19d202ebed76e284297427a2f5138e49f4d0c302d109381" src="https://signmydata.com/?logo=seal-fingerprint.jpeg" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
 ```
 
-For proper derivation notation:
-- The `src` must contain a valid URL with proper URL encoding. (No spaces or quote characters, '%' encode special character, etc.; see RFC3986.) Because of the URL encoding, quotes around the URL's value are optional.
-- The `src` for a derivative file should reference the known source. If the source contains a SEAL signature with `src` record, then the derivative file MUST use the same `src` value. A SEAL-signed file with `src` should not reference another file with a SEAL-signed `src` record. (A derivative of a derivative is still based on the same source media and should reference the same source file.) The maximum number of links to the source material should be "1 hop".
-- If the `src` URL cannot be accessed, then the source cannot be validated. This is *not* an invalid source and does not invalidate the derivation's SEAL signature. In effect, the SEAL's `src` record attests that the source existed at the time the file was signed.
+When referencing source media:
+- The `src` URL should reference the original (pre-transformed) media. This source file may be a normal media file, a media file with other authenticating information, or a file signed with SEAL. When possible, the URL should be a direct link to the media file. However, for services with dynamic content (e.g., a video hosting site like YouTube), the URL may reference a web page containing the media.
+- A SEAL-signed file with `src` MUST NOT reference another file with a SEAL-signed `src` record. This is because a transformation of a transformed file is still based on the same source media and should reference the same source file. It is invalid to create a chain of files using `src` fields.
+- Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes that the URL was valid at the time of the signing.
+- The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or through some other means), then the digest permits confirming the source media.
+- The source digest (`srcd`) may be provided even if the source location (`src`) is unspecified. 
 
 ## Local Signing
 Local signing permits a user to directly sign their media. This does not require any third-party services.
