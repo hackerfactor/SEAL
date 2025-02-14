@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.1, 12-February-2025
+Version 1.2.2, 13-February-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.2 (2025-02-13) For readability: Splitting the signing, informational, and source reference fields into separate subsections.
 - 1.2.1 (2025-02-12) Adding derived source references.
 - 1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
 - 1.1.4 (2024-10-05) More details about formats and rewording the appending rules for overlap protection.
@@ -144,7 +145,7 @@ The SEAL metadata format is very similar to the DNS entry format. It consists of
   - Space (' ', character code 0x20)
 Other characters, including tabs, binary, and multibyte characters are not permitted.
 
-The fields are as follows:
+The fields for specifying the signature are as follows:
 - `seal=1` (Required) This specifies a SEAL record for version 1 (the current version). This MUST be the first text in the SEAL record.
 - `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. For now, you can expect "rsa". For elliptic curve algorithms, use "ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, and limited punctuation; no spaces).
@@ -174,8 +175,6 @@ The fields are as follows:
 - `d=domain`: The domain name containing the DNS TXT record for the SEAL public key.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
-- `copyright="text"`: (Optional) Copyright information. Copyright information is typically stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the SEAL record.
-- `info="text"`: (Optional) Textual comment information. Typically this is stored in another metadata field, such as EXIF, IPTC, or XMP. However, it can be included in the SEAL record.
 - `sf=base64` (Optional) The **s**ignature **f**ormat. Possible values:
   - "hex": The signature is stored as a two-byte hexadecimal notation using lowercase letters [0-9a-f]. Optional padding can use spaces (character 0x20) after the hexadecimal value.
   - "HEX": The signature is stored as a two-byte hexadecimal notation using uppercase letters [0-9A-F]. Optional padding can
@@ -194,19 +193,33 @@ use spaces (character 0x20) after the hexadecimal value.
 
 A sample SEAL signature may look like:
 ```
-seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw=="
+<seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" s="OQlSiu3HcMR5P2sZ8yEInAaIFPXII1gZSf1B/1OnP9tTSgz2v96GVooCZ6YOiZwLsMI+sfKqF1cOM4aqBz4ywpV+7HIEfccoCkcYhNvFFP1lQILRdA4qqUl8PKsKiA179oriob3HpXtL+WG5Tr6+C4Ajlkt628bgFH7UYAF0hM68/6DAGHBqwqk0lZmvQdH8hM18WRpTAsWqaglf0XWzfhEX+WgXGY6ilRAtSXoc5E2xo3UlxyRwkXuO8A1gGG1wyA+9NS+h5+GSXo7EPXW52ccrIgOIqd8XXHRLDqpmF4CjASYBRtgdqmDEA4UWKrYTwuQbZ4e9MJcmVSxRXJj0kw==">
 ```
-## Referencing Source Media
-A signed file is may not be the source media file. It may be derivation that has been re-encoded, resized, cropped, or have other alterations. For example, many web sites and content delivery services automatically re-encode media for users to download. Examples of common transformations include:
+
+Additional informative fields are supported in the SEAL signature, but are not required. These include informative fields and referenced source media.
+
+### Informational Fields
+Many existing metadata structures, including EXIF, IPTC, and XMP, support copyright information or descriptive comments. SEAL is not intended to replace these existing metadata structures. However, because a file may be stripped of informational metadata and then signed, SEAL does support specifying this additional information in the following fields:
+
+- `copyright="text"`: (Optional) Copyright information.
+- `info="text"`: (Optional) Textual comment information.
+
+All text must be in UTF8. Care must be taken to ensure that the quote character is not included in the text value.
+
+### Referencing Source Media
+A signed file may not be the source media file. It may be derivation that has been re-encoded, resized, cropped, or have other alterations. For example, many web sites and content delivery services automatically re-encode media for users to download. Examples of common transformations include:
 - Converting between file formats, such as PNG, JPEG, and WebP. Similarly, video hosting sites often transcode the video based on the recipient's supported format. As an example, if the file is in a DIVX format but the client only supports MP4, then servers will typically re-encode the file to MP4 before sending it to the client.
 - Rescaling, cropping, or rotating the media. For example, if the image is 4000x3000 but the user's mobile device only supports 800x600, then transferring the full size results is a slower download rate and requires more resources from the client's device to store and scale the media. Instead, the server may scale the image smaller first, resulting in faster download speeds, faster client performance, and a better user experience.
 - Some metadata, such as EXIF and XMP, are informative but provide no rendering instructions. This can translate into wasted bandwidth since the client typically ignores the data. Many media hosting sites automatically remove optional metadata in order to reduce bandwidth requirements.
 
-If a file is transformed before downloading, then any existing SEAL signature becomes invalid. This is because transformations require altering the file after being signed. To address this problem, the SEAL signature may include the following fields that reference the source media:
+If a file is transformed before downloading, then any existing SEAL signature becomes invalid. This is because transformations require altering the file after being signed. To address this problem, a SEAL signature can be applied after the transformation and may include the following fields that reference the source media:
 
-- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) source media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
-- `srcd=digest`: (Optional) The **d**igest of the **s**ou**rc**e file. This permits confirming the source file's contents.
-- `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file. Default is sha256 encoded with base64 encoding. When used, `srcd` MUST be present.
+- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc** media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
+- `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents.
+- `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file.
+  - When `srca` is specified, `srcd` MUST be present.
+  - The default digest algorithm is sha256, However any digest algorithm supported by the `da` parameter can be used here.
+  - The default digest encoding is `base64`. Other supported encoding include `HEX` and `hex` (see the `sf` parameter for details).
 
 A sample SEAL signature with source reference may look like:
 ```
