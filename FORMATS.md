@@ -47,11 +47,11 @@ Although document declarations may appear anywhere in the document, they SHOULD 
 ## XMP
 XMP is a common metadata structure found in many different file formats. XMP data uses an XML file format structure. SEAL supports two types of XMP records:
 - `<seal .../>`
-- `<\*:seal> ... </\*:seal>`, where '\*' denotes a namespace, such as `<seal:seal>` or `<xmp:seal>`.
+- `<*:seal> ... </*:seal>`, where '*' denotes a namespace, such as `<seal:seal>` or `<xmp:seal>`.
 
-In each case, the parameters for the tag includes the pre-defined fields from the specification. (E.g., `<seal:seal seal=1 b=F~S,s~f d=domain s=*signature* />` or `<seal:seal>seal=1 b=F~S,s~f d=domain s=*signature*</seal:seal>`)
+In each case, the parameters for the tag includes the pre-defined fields from the specification. (E.g., <code>&lt;seal:seal seal=1 b=F\~S,s\~f d=**domain** s=**signature** /&gt;</code> or <code>&gt;seal:seal&lt;seal=1 b=F\~S,s\~f d=**domain** s=**signature**&lt;/seal:seal&gt;</code>)
 
-The default namespace is `seal`. However, decoders should scan any `\*:seal` record.
+The default namespace is `seal`. However, decoders should scan any `*:seal` record.
 
 Some XMP records can contain nested media. (These are usually base64-encoded files.) The nested media may contain its own SEAL signatures. Those signatures are limited to the scope of the nested media. Generic validators that do not know about the specifics of the XMP processing are not required to evaluate XMP's nested media.
 
@@ -77,7 +77,7 @@ The SEAL signature can be stored in a variety of chunks:
 The PNG chunk type may specify that the chunk's contents can be safely copied during a re-encoding. Re-encoding a PNG will likely invalidate the SEAL signature. However, this is supposed since an invalid signature explicitly denotes that the file has been altered (re-encoded) after signing.
 
 ## JPEG
-JPEG stores data in blocks that begin with a two-byte tag (`*tag* & 0xffc0 = 0xffc0`). For example, a JPEG begins with 0xffd8 for the start of file, may include EXIF data in an 0xffe1 "APP1" block, etc. Although there are common conventions that recommend putting EXIF and XMP records in APP1 blocks, there is no reason for them to exist in other APP blocks (APP0 through APP14).
+JPEG stores data in blocks that begin with a two-byte tag (<code>*tag* & 0xffc0 = 0xffc0</code>). For example, a JPEG begins with 0xffd8 for the start of file, may include EXIF data in an 0xffe1 "APP1" block, etc. Although there are common conventions that recommend putting EXIF and XMP records in APP1 blocks, there is no reason for them to exist in other APP blocks (APP0 through APP14).
 - Tags 0xffd8 (start of image) and 0xffd9 (end of image) do not have a length.
 - All other tags have a two-byte length that includes its own bytes. (The minimum length is "2".)
 - After each JPEG block should be another JPEG block. If the bytes after the end of the JPEG block do not begin with a valid tag, then the bytes are skipped until a valid tag is found.
@@ -159,7 +159,7 @@ PDFs are parse backwards, starting from the end of the file:
 Inserting a SEAL record before any object in the file effectively means every `xref` table, `trailer`, and `startxref` may need to be updated. And when you add in compressed xref tables, then a single change could result in a different length and even more offset updating. (This becomes a nightmare.) For this purpose, inserting a SEAL record into any existing PDF must be done after the last object.
 
 PDF permits comments located between objects. A comment consists of the "%" character and continues to the end of the line. Technically, the initial "%PDF" and final "%%EOF" are mandatory comments. All other comments are optional. Comments are ignored when parsing. A SEAL record can be written into any optional comment in the file. E.g.:
-`\%\%<seal seal=1 da=sha1 ka=rsa d="signmydata.com" s="*signature*"/>`
+<code>%%&lt;seal seal=1 da=sha1 ka=rsa d="**domain**" s="**signature**"/&gt;</code>
 
 The SEAL record MUST NOT be encrypted or compressed. (Otherwise it cannot be validated without the password, and that defeats the purpose of validating files.)
 
