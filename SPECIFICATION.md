@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.2, 13-February-2025
+Version 1.2.3, 31-May-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.3 (2025-05-31) Adding in sidecar option.
 - 1.2.2 (2025-02-13) For readability: Splitting the signing, informational, and source reference fields into separate subsections.
 - 1.2.1 (2025-02-12) Adding derived source references.
 - 1.1.5 (2024-11-16) Moving all format-specific information into the [Formats](/FORMATS.md) documentation.
@@ -214,7 +215,7 @@ A signed file may not be the source media file. It may be derivation that has be
 
 If a file is transformed before downloading, then any existing SEAL signature becomes invalid. This is because transformations require altering the file after being signed. To address this problem, a SEAL signature can be applied after the transformation and may include the following fields that reference the source media:
 
-- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc** media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
+- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc**e media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
 - `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents.
 - `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file.
   - When `srca` is specified, `srcd` MUST be present.
@@ -232,6 +233,11 @@ When referencing source media:
 - Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes that the URL was valid at the time of the signing.
 - The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or through some other means), then the digest permits confirming the source media.
 - The source digest (`srcd`) may be provided even if the source location (`src`) is unspecified. 
+
+SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media, such as a DVD.) When used as a sidecar, the `src` parameter may be absent. For implementation, there are two recommended locations for the source file:
+1. The sidecar filename contains an extension, such as `.seal`. If the filename without the extension exists in the same directory, then it will be used as the source file. E.g., if `image.png.seal` and `image.png` exist in the same directory, then `image.png` will be used as the `src` file.
+2. The validator may accept a source file location as a parameter. For example: `sealtool -I image.png sidecar.seal`. The presence of a specified location parameter should supercede any `src` URL in the SEAL record.
+Implementations may choose to include other methods for identifying the source file location.
 
 ## Local Signing
 Local signing permits a user to directly sign their media. This does not require any third-party services.
