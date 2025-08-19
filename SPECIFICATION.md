@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.3, 31-May-2025
+Version 1.2.4, 19-Aug-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.4 (2025-08-19) Updating in sidecar option based on findings during the implementation in SEAL-C.
 - 1.2.3 (2025-05-31) Adding in sidecar option.
 - 1.2.2 (2025-02-13) For readability: Splitting the signing, informational, and source reference fields into separate subsections.
 - 1.2.1 (2025-02-12) Adding derived source references.
@@ -234,10 +235,22 @@ When referencing source media:
 - The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or through some other means), then the digest permits confirming the source media.
 - The source digest (`srcd`) may be provided even if the source location (`src`) is unspecified. 
 
-SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media, such as a DVD.) When used as a sidecar, the `src` parameter may be absent. For implementation, there are two recommended locations for the source file:
-1. The sidecar filename contains an extension, such as `.seal`. If the filename without the extension exists in the same directory, then it will be used as the source file. E.g., if `image.png.seal` and `image.png` exist in the same directory, then `image.png` will be used as the `src` file.
-2. The validator may accept a source file location as a parameter. For example: `sealtool -I image.png sidecar.seal`. The presence of a specified location parameter should supercede any `src` URL in the SEAL record.
-Implementations may choose to include other methods for identifying the source file location.
+### Sidecar support
+SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media like a DVD.)
+
+For computing the digest:
+- The byte range `b=` is relative to the sidecar file and not the source media file.
+- Any reference to the start of the file (e.g. `b=F~S`, `b=p~S` when there is no previous signature, etc.) will include all data from the source media. This source data is prefaced before any of the sidecar file's data.
+
+For example, if the sidecar contains `b=F~S,s~f`, then the start of the file `F` includes the entire source media and the sidecar record up to the start of the sidecar's sgnature. Ranges that refer to previous signatures (`P~p`) are only relative to signatures found in the sidecar file, even if the source file contains a previous SEAL signature. In effect, the read-only media is treated as a large data block regardless of any previous signatures inside the source media file.
+
+What a sidecar enables:
+- The sidecar permits generating signatures for read-only media.
+- The sidecar permits an unsigned source media file to be signed without modifying the source media file. This is analogous to web sites that permit downloading source code *and* provide a SHA1 or SHA256 checksum that can be used to validate the download. In the case of SEAL, the downloaded source can be checked against a signed digital signature. This is a more robust than using a standalone SHA256 signature since you also know who signed it and the signature cannot be impersonated.
+- Some download services use a PGP signature instead of a standalone SHA256 signature. This serves the same purpose as SEAL, but with the added overhead and complexity of transferring and installing PGP signatures. SEAL provides the same functionality with less complexity.
+- A file may be signed directly using SEAL (e.g., signed.png), marked as read-only, and then the read-only file can be signed separately using a sidecar. This permits someone to acknowledge receipt of a signed file.
+
+For validation, only the sidecar should be evaluated. If the source media contains a SEAL signature, then that can be evaluated without using the sidecar.
 
 ## Local Signing
 Local signing permits a user to directly sign their media. This does not require any third-party services.
