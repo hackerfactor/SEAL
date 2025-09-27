@@ -216,10 +216,10 @@ A signed file may not be the source media file. It may be derivation that has be
 
 If a file is transformed before downloading, then any existing SEAL signature becomes invalid. This is because transformations require altering the file after being signed. To address this problem, a SEAL signature can be applied after the transformation and may include the following fields that reference the source media:
 
-- `src="url"`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc**e media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986.
-- `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents.
+- `src=url`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc**e media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986. This will be saved in the signature.
+- `srcf=filepath`: (Optional) The path pointing to the **s**ou**rc**e **f**ile. This file will not be saved in the signature. `srcf` takes priority over `src` when determining which to calculate the digest from.
+- `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents, and will be calculated from `src` or `srcf` if not provided. When present the provided `srcd` will be used.
 - `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file.
-  - When `srca` is specified, `srcd` MUST be present.
   - The default digest algorithm is sha256, However any digest algorithm supported by the `da` parameter can be used here.
   - The default digest encoding is `base64`. Other supported encoding include `HEX` and `hex` (see the `sf` parameter for details).
 
@@ -230,10 +230,10 @@ seal="1" b="~S,s~" d="seal.hackerfactor.com" ka="rsa" srca="sha256:hex" srcd="7d
 
 When referencing source media:
 - The `src` URL should reference the original (pre-transformed) media. This source file may be a normal media file, a media file with other authenticating information, or a file signed with SEAL. When possible, the URL should be a direct link to the media file. However, for services with dynamic content (e.g., a video hosting site like YouTube), the URL may reference a web page containing the media.
-- A SEAL-signed file with `src` MUST NOT reference another file with a SEAL-signed `src` record. This is because a transformation of a transformed file is still based on the same source media and should reference the same source file. It is invalid to create a chain of files using `src` fields.
-- Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes that the URL was valid at the time of the signing.
-- The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or through some other means), then the digest permits confirming the source media.
-- The source digest (`srcd`) may be provided even if the source location (`src`) is unspecified. 
+- A SEAL-signed file with `src` may reference another file with a SEAL-signed `src` record. It is valid to create a chain of files using `src` fields.
+- Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes the source from which the file being signed was derived.
+- The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or a local file via `srcf`), then the digest permits confirming the source media. The signature can continue with a non-matching `srcd` though, as it is not guarenteed that the url will point directly to the source media itself.
+- The source digest (`srcd`) may be provided even if the source location (`src`/ `srcf`) is unspecified.
 
 ### Sidecar support
 SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media like a DVD.)
