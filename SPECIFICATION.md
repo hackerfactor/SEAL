@@ -218,7 +218,7 @@ If a file is transformed before downloading, then any existing SEAL signature be
 
 - `src=url`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc**e media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986. This will be saved in the signature.
 - `srcf=filepath`: (Optional) The path pointing to the **s**ou**rc**e **f**ile. This file will not be saved in the signature. `srcf` takes priority over `src` when determining which to calculate the digest from.
-- `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents, and will be calculated from `src` or `srcf` if not provided
+- `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents, and will be calculated from `src` or `srcf` if not provided. When present the provided `srcd` will be used.
 - `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file.
   - The default digest algorithm is sha256, However any digest algorithm supported by the `da` parameter can be used here.
   - The default digest encoding is `base64`. Other supported encoding include `HEX` and `hex` (see the `sf` parameter for details).
@@ -233,7 +233,7 @@ When referencing source media:
 - A SEAL-signed file with `src` may reference another file with a SEAL-signed `src` record. It is valid to create a chain of files using `src` fields.
 - Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes the source from which the file being signed was derived.
 - The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or a local file via `srcf`), then the digest permits confirming the source media. The signature can continue with a non matching `srcd` though, as it is not guarenteed that the url will point directly to the source media itself.
-- The source digest (`srcd`) may be provided even if the source location (`src`/ `srcf`) is unspecified. 
+- The source digest (`srcd`) may be provided even if the source location (`src`/ `srcf`) is unspecified.
 
 ### Sidecar support
 SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media like a DVD.)
