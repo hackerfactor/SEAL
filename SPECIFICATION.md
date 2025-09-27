@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.4, 19-Aug-2025
+Version 1.2.5, 27-Sep-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.5 (2025-09-27) Revising the definitions for `src`, `srcd`, and `srcf` for source referencing.
 - 1.2.4 (2025-08-19) Updating in sidecar option based on findings during the implementation in SEAL-C.
 - 1.2.3 (2025-05-31) Adding in sidecar option.
 - 1.2.2 (2025-02-13) For readability: Splitting the signing, informational, and source reference fields into separate subsections.
