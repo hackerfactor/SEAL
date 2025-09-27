@@ -232,7 +232,7 @@ When referencing source media:
 - The `src` URL should reference the original (pre-transformed) media. This source file may be a normal media file, a media file with other authenticating information, or a file signed with SEAL. When possible, the URL should be a direct link to the media file. However, for services with dynamic content (e.g., a video hosting site like YouTube), the URL may reference a web page containing the media.
 - A SEAL-signed file with `src` may reference another file with a SEAL-signed `src` record. It is valid to create a chain of files using `src` fields.
 - Web services may change URLs over time. The `src` field is not a guarantee that the file currently exists at that URL at the time of validation. Instead, it denotes the source from which the file being signed was derived.
-- The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or a local file via `srcf`), then the digest permits confirming the source media. The signature can continue with a non matching `srcd` though, as it is not guarenteed that the url will point directly to the source media itself.
+- The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or a local file via `srcf`), then the digest permits confirming the source media. The signature can continue with a non-matching `srcd` though, as it is not guarenteed that the url will point directly to the source media itself.
 - The source digest (`srcd`) may be provided even if the source location (`src`/ `srcf`) is unspecified.
 
 ### Sidecar support
