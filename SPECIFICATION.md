@@ -117,14 +117,17 @@ The DNS entry MUST contain a series of field=value pairs. The defined fields are
 - `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. For RSA, use "rsa". For elliptic curve algorithms, use "ka=ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, limited punctuation, and quotes or no spaces).
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. When not present, the default value is an empty string: `uid=''`. The string cannot contain single-quote ('), double-quote ("), or space characters.
-- `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
+- `p=base64data` or `pkd=sha256:base64data` (Required) The base64-encoded **p**ublic key or **p**ublic **k**ey **d**igest. 
+  - Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. 
+  - Double quotes and spaces are permitted because some DNS systems require breaks for long values. 
+  - The `p=` or `pkd=` parameter MUST be the last field in the DNS TXT record.
 
 For revocation:
 - `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
-- `p=`, `p=revoke`, or no `p=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
+- `p=`, `p=revoke`, or no `p=` and no `pkd=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
 - If both `r=` is present and `p=` denotes a revocation, then `r=` must be ignored and all keys are revoked. This is because there is no public key available for validating pre-revocation signatures.
 
-DNS has a limit of 255 bytes per text string. Longer SEAL records can be split into strings. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
+DNS has a limit of 255 bytes per text string. Longer SEAL records can be split into strings, or the digest of the public key can be used with the public key stored in the Seal record instead. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
 
 A complete DNS record may look like:
 ```
@@ -192,6 +195,7 @@ use spaces (character 0x20) after the hexadecimal value.
     - `date2:` specifies one decimal point, such as "20240326164401.50" and accuracy to within 0.005 seconds.
     - `date3:` specifies one decimal point, such as "20240326164401.500" and accuracy to within 0.0005 seconds. While this `date3` example is numerically equivalent to the `date1` example, they differ in the specified accuracy.
 - `sl=hex` The **s**ignature **l**ength is typically optional. It is only required if (A) padding is applied, (B) the length of a signature is variable, or (C) the length cannot be determined based on the SEAL record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary. If the signature contains any padding characters, then this field MUST be included to prevent tampering with the padding.
+- `pk=public-key` (Optional) The **p**ublic **k**ey used to generate the signature. This allows for longer keys than the DNS records easily support. If this is present then the `pkd=` in the DNS record must be set, and the `p=` should not be, if both are present then the `p=` must also be verified.
 - `s=signature` (Required) The computed signature for the SEAL record. This MUST be last value in the SEAL record. If in binary format, the signature must not be quoted. If in base64 or hexadecimal format, the signature may be padded with spaces.
 
 A sample SEAL signature may look like:
