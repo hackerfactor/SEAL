@@ -343,6 +343,14 @@ For the extended date and/or id information:
 7. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
 8. If the computed digest (from step 5) matches the decrypted digest (from step 6), then the signature matches. This validates all bytes covered by the byte range (`b=`), as well as any timestamp and user id.
 
+For inline public key signed files:
+1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
+1. The digest algorithm (`da=`) is used to generate a digest of the file.
+1. Retrieve the public key digest and public key digest algorithm from the DNS entry specified by the domain name (`d=`).
+1. Use the public key digest algortithm (`pka=`) and the public key (`pk=`) to calculate and verify the digest stored in the DNS record.
+1. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`), resulting in a digest.
+1. If the computed digest matches the decrypted digest, then the signature matches. This validates all bytes covered by the byte range (`b=`).
+
 All verification is performed locally. There is no need to consult any external service for validating the cryptography. This also permits private verification:
 - DNS is required for retrieving the public key. However, DNS is a request-forwarding service. The domain providing the key never knows who is performing the validation. (Unless you intentionally bypass the DNS relaying and contact the authoritative DNS server directly.)
 - Your local DNS server only sees a request for a DNS TXT lookup for a domain name. It does not know if you want the SEAL information, DKIM, SPF, or other data that is stored in the DNS TXT fields.
