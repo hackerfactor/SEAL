@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.5, 27-Sep-2025
+Version 1.2.6, 25-Oct-2025
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.6 (2025-09-27) Revising how revoke works.
 - 1.2.5 (2025-09-27) Revising the definitions for `src`, `srcd`, and `srcf` for source referencing.
 - 1.2.4 (2025-08-19) Updating in sidecar option based on findings during the implementation in SEAL-C.
 - 1.2.3 (2025-05-31) Adding in sidecar option.
@@ -119,11 +120,6 @@ The DNS entry MUST contain a series of field=value pairs. The defined fields are
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. When not present, the default value is an empty string: `uid=''`. The string cannot contain single-quote ('), double-quote ("), or space characters.
 - `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
 
-For revocation:
-- `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denoting the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
-- `p=`, `p=revoke`, or no `p=` defined. This indicates that all instances of this public key are revoked. `r=` is not required when revoking all keys.
-- If both `r=` is present and `p=` denotes a revocation, then `r=` must be ignored and all keys are revoked. This is because there is no public key available for validating pre-revocation signatures.
-
 DNS has a limit of 255 bytes per text string. Longer SEAL records can be split into strings. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
 
 A complete DNS record may look like:
@@ -132,6 +128,25 @@ seal.example.com TXT seal=1 ka=rsa p="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQ
 ```
 
 The hostname does *not* need to contain "seal". The only requirement is that it must be a valid DNS name *and* must match the domain name specified in the metadata signature.
+
+### DNS Revocation
+SEAL makes a distinction between 'revoked' and 'not found'.
+- "Revoke" is an explicit revocation of the keys and signature. Any matching signatures are invalid due to revocation.
+- "Not found" could be due to a network error, DNS timeout, or other technical issue. It means that the signature cannot be checked.
+
+The `r=` parameter is the recommended way to revoke a SEAL DNS record.
+- `r=date` The timestamp in [ISO 8601](https://www.iso.org/iso-8601-date-and-time-format.html) (year-month-day) format denotes the **r**evocation date in GMT. All signatures after this date are treated as invalid, even if the public key validates the signature. Use this when the key is revoked after a specific date. E.g., `r=2024-04-03T12:34:56`, `r="2024-04-03 12:34:56"`, or `r=2024-04-03`.
+- `r=revoke` or `r=` (no date defined) revokes all media signed using the specific key, regardless of the signing date.
+- `p=`, `p=revoke`, or no `p=` defined. This sets a global revocation, indicating that "all signatures that do not explicitly matched some other DNS TXT record" are revoked. `r=` is not required when setting a global revocation.
+- If both `r=` is present and `p=` denotes a revocation, then `r=` must be ignored and all keys are revoked. This is because there is no public key available for validating pre-revocation signatures.
+
+When checking a DNS record against a SEAL record, all provided DNS fields must match. For example, if `seal=` does not match the version number, or `ka` is defined in DNS and does not match the SEAL record's key algorithm, or DNS defines an `id` and it does not match the SEAL record, then the revocation does not apply.
+
+The logic for checking for revocations should be:
+1. If a **revoked** DNS record exists that validates the signature, then the signature is revoked.
+2. Else: If a DNS record exists and validates the signature (without a revoke), then the signature is valid.
+3. Else: If no DNS records validate the signature and there is a generic revocation (e.g., `p=revoke`), then the record is revoked.
+4. Else: If no DNS record validates the signature and no mention of a global revocation, then validation status is 'not found'.
 
 ## Metadata Signature Format
 The SEAL metadata format is very similar to the DNS entry format. It consists of:
