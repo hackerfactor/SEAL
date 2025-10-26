@@ -6,7 +6,7 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
-- 1.2.6 (2025-09-27) Revising how revoke works.
+- 1.2.6 (2025-10-25) Revising how revoke works.
 - 1.2.5 (2025-09-27) Revising the definitions for `src`, `srcd`, and `srcf` for source referencing.
 - 1.2.4 (2025-08-19) Updating in sidecar option based on findings during the implementation in SEAL-C.
 - 1.2.3 (2025-05-31) Adding in sidecar option.
