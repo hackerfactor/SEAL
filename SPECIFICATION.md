@@ -118,7 +118,12 @@ The DNS entry MUST contain a series of field=value pairs. The defined fields are
 - `ka=rsa` (Required) The **k**ey **a**lgorithm. This must match the algorithm used to generate the key. For RSA, use "rsa". For elliptic curve algorithms, use "ka=ec".
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: [A-Za-z0-9.+/-] (letters, numbers, limited punctuation, and quotes or no spaces).
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. When not present, the default value is an empty string: `uid=''`. The string cannot contain single-quote ('), double-quote ("), or space characters.
-- `p=base64data` (Required) The base64-encoded **p**ublic key. Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. Double quotes and spaces are permitted because some DNS systems require breaks for long values. The `p=` parameter MUST be the last field in the DNS TXT record.
+- `pka=sha256` (Optional) The **p**ublic **k**ey **a**lgorithm is the algorithim used to generate the digest of the public key, if a digest is being stored instead of the full key. The Default algorithm is "sha256".
+- `p=base64data` or `pkd=base64data` (Required) The base64-encoded **p**ublic key or **p**ublic **k**ey **d**igest. 
+  - Ending "=" in the base64 encoding may be omitted. The value may include whitespace and double quotes. For example: `p="abcdefg="` is the same as `p=abcdefg` is the same as `p="abc" "defg" "="`. 
+  - Double quotes and spaces are permitted because some DNS systems require breaks for long values. 
+  - If `pkd=` is used then `pka=` must also be present.
+  - The `p=` or `pkd=` parameter MUST be the last field in the DNS TXT record.
 
 DNS has a limit of 255 bytes per text string. Longer SEAL records can be split into strings. For this reason, values cannot contain double quotes. Most DNS providers will automatically split long strings when you create the TXT field.
 
@@ -207,6 +212,7 @@ use spaces (character 0x20) after the hexadecimal value.
     - `date2:` specifies one decimal point, such as "20240326164401.50" and accuracy to within 0.005 seconds.
     - `date3:` specifies one decimal point, such as "20240326164401.500" and accuracy to within 0.0005 seconds. While this `date3` example is numerically equivalent to the `date1` example, they differ in the specified accuracy.
 - `sl=hex` The **s**ignature **l**ength is typically optional. It is only required if (A) padding is applied, (B) the length of a signature is variable, or (C) the length cannot be determined based on the SEAL record data storage. The length MUST include whatever padding is required for storing the computed signature. The signature algorithm (`ka=`) MUST know how to identify and handle padding. The current supported algorithm (`ka=rsa`) does not require padding and uses a fixed-length, so `sl=` is unnecessary. If the signature contains any padding characters, then this field MUST be included to prevent tampering with the padding.
+- `pk=public-key` (Optional) The **p**ublic **k**ey used to generate the signature. This allows for longer keys than the DNS records easily support. If this is present then the `pkd=` in the DNS record must be set, and the `p=` should not be, if both are present then the `p=` must also be verified.
 - `s=signature` (Required) The computed signature for the SEAL record. This MUST be last value in the SEAL record. If in binary format, the signature must not be quoted. If in base64 or hexadecimal format, the signature may be padded with spaces.
 
 A sample SEAL signature may look like:
@@ -351,6 +357,14 @@ For the extended date and/or id information:
 6. Retrieve the public key from the DNS entry specified by the domain name (`d=`).
 7. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
 8. If the computed digest (from step 5) matches the decrypted digest (from step 6), then the signature matches. This validates all bytes covered by the byte range (`b=`), as well as any timestamp and user id.
+
+For inline public key signed files:
+1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
+1. The digest algorithm (`da=`) is used to generate a digest of the file.
+1. Retrieve the public key digest and public key digest algorithm from the DNS entry specified by the domain name (`d=`).
+1. Use the public key digest algortithm (`pka=`) and the public key (`pk=`) to calculate and verify the digest stored in the DNS record.
+1. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`), resulting in a digest.
+1. If the computed digest matches the decrypted digest, then the signature matches. This validates all bytes covered by the byte range (`b=`).
 
 All verification is performed locally. There is no need to consult any external service for validating the cryptography. This also permits private verification:
 - DNS is required for retrieving the public key. However, DNS is a request-forwarding service. The domain providing the key never knows who is performing the validation. (Unless you intentionally bypass the DNS relaying and contact the authoritative DNS server directly.)
