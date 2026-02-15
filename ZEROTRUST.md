@@ -1,6 +1,8 @@
 # Zero Trust Comparisons
 One of the most frequently asked questions relates C2PA to SEAL: What does SEAL provide that C2PA does not?
 
+C2PA and SEAL perform different tasks. SEAL creates a direct proof of authenticity bound to the reputation of a domain name. C2PA proves (or tries to prove) that you used a certain software (and camera) for a piece of media, possible with edited metadata.
+
 C2PA is an institutional trust framework anchored in X.509 and curated trust lists. As diagrammed in the [C2PA Specifications](https://spec.c2pa.org/specifications/specifications/2.3/specs/C2PA_Specification.html#_trust_model):
 ![C2PA Trust Model Diagram](docs/c2pa-trust-model-diagram.png)
 - **Certificates**: The signer uses a certificate tied to a curated "trust list" (TL). The validation process is opaque and cannot be verified by the end user. The certificates contain a text name that identifies the certificate owner, but there is no information for cross-validating the attribution.
