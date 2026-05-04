@@ -6,6 +6,7 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.9 (2026-05-03) Incorporating feedback (version error handling).
 - 1.2.8 (2026-04-05) Better documentation for revocation and identifying the untrusted backdate scenario.
 - 1.2.7 (2026-04-02) Reordering documentation for clarity, updating the supported algorithms. Incorporating feedback from UMBC's Cyber Defense Lab and PASAWG.
 - 1.2.6 (2025-10-25) Revising how revocation works.
@@ -130,6 +131,11 @@ The DNS entry MUST contain a series of field=value pairs. The required fields ar
 - `seal=1` (Required) This specifies a SEAL record for version 1 (the current version). This MUST be the first text in the TXT record.
 - `ka=rsa` or `ka=ec` (Required) The **k**ey **a**lgorithm. This must match the asymmetric system used to generate the key. For RSA, use `rsa`; for Elliptic Curve, use `ec`.
 - `p=base64data` or `pkd=base64data` (Required) The base64-encoded **p**ublic key or **p**ublic **k**ey **d**igest. 
+
+> ### Version Handling
+> SEAL makes no assumptions about backwards compatibility. It is very possible for a future version to have a different format (e.g., `seal=1` may not look like `seal=2`). If an encoder or validator supports multiple versions, then it may need a condition that determines how to process the SEAL record. The only requirement for versions is that all SEAL records of the same version (e.g., `seal=1`) must be compatible.
+>
+> Adding in support for additional cryptographic algorithms or more encoding methods, such as post-quantum or inline, does not change the overall format so the version number does not need to change. If an older `seal=1` validator does not recognize a cryptographic algorithm or inline parameter (newer features in `seal=1`), then it should recognize that it cannot validate the cryptography or handling the additional parameters.
 
 The optional fields are:
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: `[A-Za-z0-9.+/-]` (letters, numbers, limited punctuation, and quotes or no spaces).
@@ -345,11 +351,11 @@ The use of a date format or `id=` field allows the signer to generate a timestam
 1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. The digest algorithm (`da=`) is used to generate a first digest of the file.
 3. If there is an identifier specified in `id=`, then the value is prepended to the first digest along with a ":" literal.
-4. If there is a date format specified in `sf=`, then a timestamp with the correct number of decimal places is generated. This is prepended to the first digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "20240326164401.50:user123:*digest1*"
+4. If there is a date format specified in `sf=`, then a timestamp with the correct number of decimal places is generated. This is prepended to the first digest along with a ":" literal. For example, `id=user123 sf=date2:hex` will generate the bytes "20240326164401.50:user123:*digest1*"
 5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. The complete signature string is stored in the `s=` value.  For example, `fs=date2:hex` might yield `s=20240326164401.50:*signature-in-hex*`.
+8. The complete signature string is stored in the `s=` value.  For example, `sf=date2:hex` might yield `s=20240326164401.50:*signature-in-hex*`.
 
 ## Remote Signing
 The signer does not need to be the same system that is populating the SEAL record. For example, if the user does not have a domain name, then they may register an account at a signing service and use that service for trusted remote signing.
@@ -375,11 +381,11 @@ A remote signer always uses the extended signing workflow, with "Local" referrin
 1. (Local) The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. (Local) The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer. This approach guarantees that the remote signer never has direct access to the signing file and provides content privacy.
 3. (Remote) If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
-4. (Remote) If there is a date format specified in `sf=`, then a timestamp with the correct number of decimal places is generated. This is prepended to the first digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "20240326164401.50:user123:*digest*"
+4. (Remote) If there is a date format specified in `sf=`, then a timestamp with the correct number of decimal places is generated. This is prepended to the first digest along with a ":" literal. For example, `id=user123 sf=date2:hex` will generate the bytes "20240326164401.50:user123:*digest*"
 5. (Remote) The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. (Remote) The private key is used with the key algorithm (`ka=`) to encrypt the digest, resulting in a signature.
 7. (Remote) If a date range was used, then the literal date range is prepended to the signature along with a ":" literal.
-8. (Remote) The completed value is returned to the local client system.  For example, `fs=date2:hex` might return a value like `20240326164401.50:*signature-in-hex*`
+8. (Remote) The completed value is returned to the local client system.  For example, `sf=date2:hex` might return a value like `20240326164401.50:*signature-in-hex*`
 9. (Local) The complete value is stored in the `s=` value.
 
 The remote signer MUST use a clock that is synchronized to an authoritative time authority.
@@ -406,7 +412,7 @@ For the extended date and/or id information:
 1. The byte range (`b=`) is parsed to identify the values to be sent to the digest hashing function.
 2. The digest algorithm (`da=`) is used to generate a first digest of the file. This is sent to the remote signer.
 3. If there is an identifier specified in `id=`, then the value is prepended to the digest along with a ":" literal.
-4. If there is a date format specified in `sf=`, then a timestamp found in the signature (`s=`) is prepended to the digest along with a ":" literal. For example, `id=user123 fs=date2:hex` will generate the bytes "20240326164401.50:user123:*digest*"
+4. If there is a date format specified in `sf=`, then a timestamp found in the signature (`s=`) is prepended to the digest along with a ":" literal. For example, `id=user123 sf=date2:hex` will generate the bytes "20240326164401.50:user123:*digest*"
 5. The combined data is sent though another digest computation (`da=`) to generate the second digest.
 6. Retrieve the public key from the DNS entry specified by the domain name (`d=`).
 7. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`, after any "date:"), resulting in a digest.
