@@ -1,5 +1,5 @@
 # SEAL Specification
-Version 1.2.8, 5-April-2026
+Version 1.2.9, 4-May-2026
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
@@ -231,8 +231,10 @@ The optional fields are:
 - `kv=1` (Optional) This specifies the **k**ey **v**ersion, in case you update the keys. When not specified, the default value is "1". The value can be any text string using the character set: `[A-Za-z0-9.+/-]` (letters, numbers, and limited punctuation; no spaces).
 - `da=sha256` (Optional) The **d**igest **a**lgorithm. This MUST be a NIST-approved algorithm. Current supported values are:
   - "sha256": The default value.
+  - "sha224": For shorter digests.
+  - "sha384": For longer digests.
   - "sha512": For much longer digests.
-  - "sha1": For shorter digests. (This algorithm is deprecated by NIST, but still widely used.)
+  - "sha1" is not supported. Although it is still widely used for other applications, SHA1 is deprecated by NIST. Since the deprecation pre-dates SEAL, SEAL does not support it.
 - `b=range` (Optional, but strongly recommended) The **b**yte range to include in the digest. This can be a complex field with sets of ranges *start*~*stop*, using tilda to denote the range deliminator. Multiple ranges may be specified by commas.
   - Each range *start*~*stop* segment must be monotonically increasing. The *stop* value must never be before the *start* value. An invalid range is an error.
   - The *start* value must never be located before the start of the file. This is an invalid range error.
