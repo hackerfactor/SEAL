@@ -6,6 +6,7 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.10 (2026-05-16) Adding external file support.
 - 1.2.9 (2026-05-03) Incorporating feedback (version error handling).
 - 1.2.8 (2026-04-05) Better documentation for revocation and identifying the untrusted backdate scenario.
 - 1.2.7 (2026-04-02) Reordering documentation for clarity, updating the supported algorithms. Incorporating feedback from UMBC's Cyber Defense Lab and PASAWG.
@@ -301,7 +302,7 @@ If a file is transformed before downloading, then any existing SEAL signature be
 - `src=url`: (Optional) A URL pointing to the unaltered (pre-transformation) **s**ou**rc**e media. Spaces, quotes or invalid characters in the URL MUST be encoded as specified in RFC3986. This will be saved in the signature.
 - `srcf=filepath`: (Optional) The path pointing to the **s**ou**rc**e **f**ile. This file will not be saved in the signature. `srcf` takes priority over `src` when determining which to calculate the digest from.
 - `srcd=digest`: (Optional) The **s**ou**rc**e file **d**igest permits confirming the source file's contents, and will be calculated from `src` or `srcf` if not provided. When present the provided `srcd` will be used.
-- `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding for the source file.
+- `srca=sha256:base64`: (Optional) The digest **a**lgorithm and encoding format for the source file.
   - The default digest algorithm is sha256, However any digest algorithm supported by the `da` parameter can be used here.
   - The default digest encoding is `base64`. Other supported encoding include `HEX` and `hex` (see the `sf` parameter for details).
 
@@ -317,6 +318,60 @@ When referencing source media:
 - The `srcd` field contains the digest of the source media. If a source file is identified (either at the `src` URL or a local file via `srcf`), then the digest permits confirming the source media. The signature can continue with a non-matching `srcd` though, as it is not guarenteed that the url will point directly to the source media itself.
 - The source digest (`srcd`) may be provided even if the source location (`src`/ `srcf`) is unspecified.
 
+### External File Support
+Many data formats are contained in a single file format (e.g., JPEG or PNG). Some data formats span multiple files that are bundled into a single container, such as as JAR, docx, pptx, and other OOXML formats -- these use a collection of files that are bundled into a single zip container. With the bundled containers, there is a single manifest file (typically an XML) and a variety of data files.
+
+A third type of data format uses a collection of unbundled files. Typically, all files exist in one directory and there is a single manifest file that identifies all of the dependent files. Examples include NASA Planetary Data System (PDS), geospatial Shapefile, and medical OME-TIFF data. In each case, there is a manifest file and a set of external data files. (These separate files are referred to as *sidecars*, but they are different from a *SEAL sidecar* that contains a SEAL signature.) Often, these files are explicitly unbundled in order to permit easy memory mapping, random file access, and large data storage. (If they were bundled in a zip file, then they would need to be unzipped before use or properly byte aligned in order to optimize memory mapping.)
+
+The following SEAL fields enable support for external files:
+- `exta=sha256:base64` (Optional) The digest **a**lgorithm and encoding format for the external file's digest. The same algorithm and format are used for all external files referenced by the SEAL record.
+- `ext.label=filename` (Optional) This field specifies the external file's name.
+- `extd.label=filename` (Optional) This field specifies the encoded digest (using `exta`) for the external file.
+
+The *label* is a unique identifier that is used to match `ext` with `extd` records. For example:
+```
+<seal seal="1" exta="sha256:base64" ext.science="science.dat" extd.science="1234abcd" ext.cow="cow.jpg" extd.cow="2345bcde" ... />
+```
+- The label can contain any valid field characters: [A-Za-z0-9.+-]
+- The label can contain initial dots (e.g., `ext...data=filename` uses the label named `..data`; everything after the literal "ext." and before the "=" is the label).
+- The label can be empty (e.g., `ext.=filename` will match with `extd.=digest`).
+- Each label is unique. Duplicate labels should be reported as an error.
+
+The access of external files introduces specific security concerns:
+- **Data size:** Including many external files can result in a very long SEAL record. The encoder must ensure that the record's size does not violate any file format restrictions. For example, PPM is typically limited to about 100 bytes for the comment field that contains the SEAL record, and JPEG formats are limited to 65530 bytes per application block (the SEAL record must fit in one JPEG app block).
+- **Path:** The path is relative to the file containing the SEAL field; it must not be an absolute path or contain upward traversals (e.g., "../"). If the destination is not a file, contains an absolute path, or upward traversal then it is an error and the file must not be checked.
+- **Path notation:** The current directory does not need a "./". All subdirectories must use the Unix/Linux forward slash (/) and not the Windows backslash (\). This is because the backslash conveys a different meaning on some file systems.
+- **File restrictions:** The `ext`'s filename must refer to a file, not a directory or other special device (e.g., block device, character device, or named pipe).
+- **File redirection:** Some operating systems support file aliases, such as the Linux symbolic link, or mounts to other file systems. These specifications only require the filename's contents to be a file. It is up to the encoder or verifier to determine whether to dereference symbolic links or restrict to a single file system.
+- **File access:** If the file is not readable, or is a symbolic link exists that references a non-existing file, then it is an error.
+
+There are multiple states when validating an external file:
+- **Error**: The path violates the definitions (absolute or upward traversal).
+- **Inaccessible**: The `ext.label` file is defined, but the file cannot be checked. For example, if the validator only has the manifest file and not the dependent files, or the validator lacks permission to access the file.
+- **Missing**: The `ext.label` is defined, but the file does not exist. This state differs from *Inaccessible* in that the validator has access to the file system and the file is explicitly not present.
+- **Unvalidated**: The `ext.label` is defined and the file exists, but there is no corresponding `extd.label`. This should warn the user that the file exists but was not validated.
+- **Matched**: The `ext.label` exists and the `extd.label` digest matched.
+- **Mismatched**: The `ext.label` exists and the `extd.label` digest did not match.
+- **Unknown**: The `extd.label` exists but there is no corresponding `ext.label`. This can happen if the filename itself contains sensitive information that cannot be distributed. For validating, the user will need to provide the `ext.label=filename` in order to validate the digest. This should warn the user that a digest could not be checked because the file is not specified.
+
+The labels are only used as unique identifiers and do not need to be reported to the user. However, every defined label should be listed with its resolved filename (or a notation for digest-only entries) and identified state. For example:
+```
+The SEAL signature's external files:
+  - Error: /etc/shadow
+  - Missing: dir/does_not_exist.dat
+  - Unvalidated: dir/no_digest_present.dat
+  - Matched: dir/digest_matched.dat
+```
+If the overall SEAL signature is invalid (either due to a signature mismatch or revocation), then the file listing should be flagged with a warning that all external resources are unverified, such as:
+```
+Warning: SEAL signature is invalid. External files are unverifiable.
+The SEAL signature's external files:
+  - Error: /etc/shadow
+  - Missing: dir/does_not_exist.dat
+  - Unvalidated: dir/no_digest_present.dat
+  - Matched: dir/digest_matched.dat
+```
+
 ### Sidecar support
 SEAL supports *sidecar* signing. A *sidecar* is a separate file that contains a the SEAL record. This is often required when the source file must not be altered. (E.g., when the file is part of legal evidence, or is located on write-once media like a DVD.)
 
@@ -324,7 +379,7 @@ For computing the digest:
 - The byte range `b=` is relative to the sidecar file and not the source media file.
 - Any reference to the start of the file (e.g. `b=F~S`, `b=p~S` when there is no previous signature, etc.) will include all data from the source media. This source data is prefaced before any of the sidecar file's data.
 
-For example, if the sidecar contains `b=F~S,s~f`, then the start of the file `F` includes the entire source media and the sidecar record up to the start of the sidecar's sgnature. Ranges that refer to previous signatures (`P~p`) are only relative to signatures found in the sidecar file, even if the source file contains a previous SEAL signature. In effect, the read-only media is treated as a large data block regardless of any previous signatures inside the source media file.
+For example, if the sidecar contains `b=F~S,s~f`, then the start of the file `F` includes the entire source media and the sidecar record up to the start of the sidecar's signature. Ranges that refer to previous signatures (`P~p`) are only relative to signatures found in the sidecar file, even if the source file contains a previous SEAL signature. In effect, the read-only media is treated as a large data block regardless of any previous signatures inside the source media file.
 
 What a sidecar enables:
 - The sidecar permits generating signatures for read-only media.
