@@ -6,7 +6,7 @@ Secure Evidence Attribution Label (SEAL) is an open solution for assigning attri
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
-- 1.2.10 (2026-05-23) Adding external file support.
+- 1.2.10 (2026-05-23) Adding external file support and multi-file support.
 - 1.2.9 (2026-05-03) Incorporating feedback (version error handling).
 - 1.2.8 (2026-04-05) Better documentation for revocation and identifying the untrusted backdate scenario.
 - 1.2.7 (2026-04-02) Reordering documentation for clarity, updating the supported algorithms. Incorporating feedback from UMBC's Cyber Defense Lab and PASAWG.
