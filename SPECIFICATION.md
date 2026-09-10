@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.10, 23-May-2026
+Version 1.2.11, 10-Sept-2026
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.11 (2026-09-10) Refining exclusions to cover the minimum size.
 - 1.2.10 (2026-05-23) Adding external file support and multi-file support.
 - 1.2.9 (2026-05-03) Incorporating feedback (version error handling).
 - 1.2.8 (2026-04-05) Better documentation for revocation and identifying the untrusted backdate scenario.
@@ -255,6 +256,10 @@ The optional fields are:
     - As another example, PNG files use chunks that end with a four-byte checksum. The checksum is not known until after the signature is computed. As a result, the byte range must exclude the PNG chunk's checksum. After the checksum is computed and inserted into the file, the chunk checksum must be updated. Assuming that the signature ends at the end of the chunk, the range can use `b=F~S,s+4~f` to exclude the signature and PNG checksum.
     - A streaming video may insert SEAL records using `b=P~S` in order to sign the bytes between the previous signature and the appended streaming data. When finalizing (closing) the video stream, the last SEAL entry SHOULD contain `b=P~S,s~f` to sign from the previous signature to the current signature and from the current signature to the end of the file.
   - If `b=` is not defined, then the default range is `b=F~S,s~f`.
+> [!IMPORTANT]
+> The `b` range MUST exclude the minimum number of bytes for the file. Most file formats only require excluding the SEAL signature. Some formats, such as PNG and RIFF files, must exclude an additional 4 bytes for a checksum. Any more excluded bytes should generate a warning about unauthenticated bytes in the file.
+>
+> Within the SEAL record (`&lt;seal ...&gt;`), only the signature can be excluded. Excluding other parts of the SEAL record is an error and the record cannot be authenticated because values can change without detection.
 - `uid=string`. (Optional) This specifies an optional **u**nique **i**dentifier, such as a UUID or date. The value is case-sensitive. The uid permits different users at a domain to have many different keys. The default value is an empty string: `uid=""`.
 - `id=text`: (Optional) A unique identifier identifying the signer's account or identity at the signing domain. When present, this impacts the signature generation.
 - `sf=base64` (Optional) The **s**ignature **f**ormat. Possible values:
