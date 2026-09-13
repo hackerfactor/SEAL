@@ -1,11 +1,12 @@
 # SEAL Specification
-Version 1.2.11, 10-Sept-2026
+Version 1.2.12, 13-Sept-2026
 
 Secure Evidence Attribution Label (SEAL) is an open solution for assigning attribution with authentication to media. It can be easily applied to pictures, audio files, videos, documents, and other file formats.
 
 This document provides the technical implementation details, including the high-level overview and low-level implementation details for local signer, local verifier, remote signer, and DNS service.
 
 ## Changes
+- 1.2.12 (2026-09-13) Explicitly defining the validation states.
 - 1.2.11 (2026-09-10) Refining exclusions to cover the minimum size.
 - 1.2.10 (2026-05-23) Adding external file support and multi-file support.
 - 1.2.9 (2026-05-03) Incorporating feedback (version error handling).
@@ -509,6 +510,18 @@ For inline public key signed files:
 4. Use the public key digest algorithm (`pka=`) and the public key (`pk=`) to calculate and verify the digest stored in the DNS record.
 5. The public key is used with the key algorithm (`ka=`) to decrypt the signature (`s=`), resulting in a digest.
 6. If the computed digest matches the decrypted digest, then the signature matches. This validates all bytes covered by the byte range (`b=`).
+
+## Validation Status
+The outcomes from the signature match, DNS lookup result, and attribution confirmation combine to form one of the following specific validator states:
+- **Invalid/Malformed**: The SEAL record is malformed or corrupted.
+- **Invalid/Tampered**: The cryptographic signature does not match the computed digest.
+- **Invalid/Revoked**: The DNS record explicitly revokes the key or signature.
+- **Invalid/Unauthenticated**: An exclusion range covers part of the SEAL record itself, other than the signature. This is a hard error because the record's own field values could be altered without detection.
+- **Valid/Unauthenticated**: The exclusion range covers more than the minimum required for the format (e.g., more than the signature and, where applicable, a format-specific checksum). The signature is otherwise valid, but the excluded bytes are outside the authenticated scope. This SHOULD generate a warning rather than a rejection, since a not-yet-recognized file format may legitimately need an exclusion that an older validator doesn't recognize.
+- **Valid**: The cryptographic signature matches, the signature covers the entire range (with known exclusions), and the public key is attributable to the signer (via DNS association).
+- **Valid/Suspect**: The cryptographic signature is valid, but it uses a key that was date-revoked after the file was signed. Because an attacker can backdate media, the signature SHOULD be flagged for corroboration against an independent Proof of Existence.
+- **Unverifiable**: The cryptographic signature cannot be checked. This could be due to a DNS lookup failure or no matching DNS record found.
+- **Unattributable**: The cryptographic signature is valid (using an [inline public key](#inline-public-keys)) but the key cannot be confirmed as belonging to the claimed domain.
 
 ## Metadata Signature Storage Area
 The SEAL metadata record may be stored in format-specific data blocks, or generic XML-like data records. Although the nomenclature may be format-specific, the basic requirements remain the same:
